@@ -9,6 +9,7 @@ export interface InvRow {
   itemName: string;
   categoryName: string;
   quantity: number;
+  unitPrice: number;
   expiryDate: string | null;
 }
 
@@ -63,12 +64,46 @@ export default function InventoryManager({ rows }: { rows: InvRow[] }) {
     return list;
   }, [rows, search, sort]);
 
+  // Total value of ALL current stock (for insurance) — independent of search.
+  const totalValue = useMemo(
+    () => rows.reduce((sum, r) => sum + r.quantity * r.unitPrice, 0),
+    [rows]
+  );
+  const filteredValue = useMemo(
+    () => filtered.reduce((sum, r) => sum + r.quantity * r.unitPrice, 0),
+    [filtered]
+  );
+
+  const money = (n: number) =>
+    n.toLocaleString("en-CA", { style: "currency", currency: "CAD" });
+
   return (
     <div>
       <h1 className="font-heading text-2xl font-bold text-navy">Inventory</h1>
       <p className="mt-1 text-charcoal/70">
         Edit stock levels and expiry dates. Colours flag low stock and expiry.
       </p>
+
+      {/* Total inventory value (for insurance / records) */}
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gold/30 bg-gold/10 p-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-charcoal/60">
+            Total value of current inventory
+          </p>
+          <p className="text-3xl font-bold text-navy">{money(totalValue)}</p>
+          <p className="text-xs text-charcoal/50">
+            Estimated from average market prices — useful for insurance records.
+          </p>
+        </div>
+        {Math.abs(filteredValue - totalValue) > 0.001 && (
+          <div className="text-right">
+            <p className="text-xs font-semibold uppercase tracking-wide text-charcoal/60">
+              Filtered subtotal
+            </p>
+            <p className="text-xl font-bold text-navy">{money(filteredValue)}</p>
+          </div>
+        )}
+      </div>
 
       <div className="mt-4 flex flex-wrap items-end gap-3">
         <div className="flex-1 min-w-[12rem]">
@@ -121,6 +156,8 @@ export default function InventoryManager({ rows }: { rows: InvRow[] }) {
               <th className="px-3 py-2">Category</th>
               <th className="px-3 py-2">Item</th>
               <th className="px-3 py-2">Qty</th>
+              <th className="px-3 py-2">Price</th>
+              <th className="px-3 py-2">Value</th>
               <th className="px-3 py-2">Status</th>
               <th className="px-3 py-2">Expiry</th>
               <th className="px-3 py-2"></th>
@@ -131,7 +168,7 @@ export default function InventoryManager({ rows }: { rows: InvRow[] }) {
               const badge = stockBadge(r.quantity, lowThreshold);
               return editId === r.itemId ? (
                 <tr key={r.itemId} className="border-t border-black/5 bg-navy/5">
-                  <td colSpan={6} className="px-3 py-2">
+                  <td colSpan={8} className="px-3 py-2">
                     <form
                       action={async (fd) => {
                         await updateInventoryAction(fd);
@@ -179,6 +216,10 @@ export default function InventoryManager({ rows }: { rows: InvRow[] }) {
                   <td className="px-3 py-2 text-charcoal/70">{r.categoryName}</td>
                   <td className="px-3 py-2 font-medium">{r.itemName}</td>
                   <td className="px-3 py-2 font-bold text-navy">{r.quantity}</td>
+                  <td className="px-3 py-2 text-charcoal/70">{money(r.unitPrice)}</td>
+                  <td className="px-3 py-2 font-semibold text-navy">
+                    {money(r.quantity * r.unitPrice)}
+                  </td>
                   <td className="px-3 py-2">
                     <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${badge.cls}`}>
                       {badge.label}

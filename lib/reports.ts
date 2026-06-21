@@ -57,17 +57,69 @@ export async function clientVisitReport(range: DateRange) {
       cl.client_id,
       u.name AS volunteer,
       COALESCE(SUM(ti.quantity), 0)::int AS items,
-      COALESCE(SUM(ti.quantity * ti.point_value_at_time), 0)::int AS points
+      COALESCE(SUM(ti.quantity * ti.point_value_at_time), 0)::int AS points,
+      COALESCE(ROUND(SUM(ti.quantity * i.unit_price), 2), 0) AS value
     FROM transactions t
     LEFT JOIN clients cl ON cl.id = t.client_id
     LEFT JOIN users u ON u.id = t.volunteer_id
     LEFT JOIN transaction_items ti ON ti.transaction_id = t.id
+    LEFT JOIN items i ON i.id = ti.item_id
     WHERE t.type = 'stock_out'
       AND t.created_at BETWEEN ${start} AND ${end}
     GROUP BY t.id, t.created_at, cl.name, cl.client_id, u.name
     ORDER BY t.created_at DESC;
   `;
   return rows;
+}
+
+// Value received per client (stock_out), and the overall donated value.
+export async function valueByClientReport(range: DateRange) {
+  const { start, end } = bounds(range);
+  const { rows } = await sql`
+    SELECT
+      cl.name AS client_name,
+      cl.client_id,
+      COUNT(DISTINCT t.id)::int AS visits,
+      COALESCE(SUM(ti.quantity), 0)::int AS items,
+      COALESCE(ROUND(SUM(ti.quantity * i.unit_price), 2), 0) AS value
+    FROM transactions t
+    JOIN clients cl ON cl.id = t.client_id
+    LEFT JOIN transaction_items ti ON ti.transaction_id = t.id
+    LEFT JOIN items i ON i.id = ti.item_id
+    WHERE t.type = 'stock_out'
+      AND t.created_at BETWEEN ${start} AND ${end}
+    GROUP BY cl.name, cl.client_id
+    ORDER BY value DESC;
+  `;
+  return rows;
+}
+
+// Total dollar value of donations (stock_in) received in the period.
+export async function donatedValueTotal(range: DateRange): Promise<number> {
+  const { start, end } = bounds(range);
+  const { rows } = await sql`
+    SELECT COALESCE(ROUND(SUM(ti.quantity * i.unit_price), 2), 0) AS value
+    FROM transaction_items ti
+    JOIN transactions t ON t.id = ti.transaction_id
+    JOIN items i ON i.id = ti.item_id
+    WHERE t.type = 'stock_in'
+      AND t.created_at BETWEEN ${start} AND ${end};
+  `;
+  return Number(rows[0]?.value ?? 0);
+}
+
+// Total dollar value distributed to clients (stock_out) in the period.
+export async function distributedValueTotal(range: DateRange): Promise<number> {
+  const { start, end } = bounds(range);
+  const { rows } = await sql`
+    SELECT COALESCE(ROUND(SUM(ti.quantity * i.unit_price), 2), 0) AS value
+    FROM transaction_items ti
+    JOIN transactions t ON t.id = ti.transaction_id
+    JOIN items i ON i.id = ti.item_id
+    WHERE t.type = 'stock_out'
+      AND t.created_at BETWEEN ${start} AND ${end};
+  `;
+  return Number(rows[0]?.value ?? 0);
 }
 
 // 2. Top Items Report
@@ -117,7 +169,8 @@ export async function donationsReport(range: DateRange) {
     SELECT
       i.name AS item_name,
       c.name AS category_name,
-      SUM(ti.quantity)::int AS total
+      SUM(ti.quantity)::int AS total,
+      ROUND(SUM(ti.quantity * i.unit_price), 2) AS value
     FROM transaction_items ti
     JOIN transactions t ON t.id = ti.transaction_id
     JOIN items i ON i.id = ti.item_id

@@ -60,14 +60,15 @@ export async function createItemAction(
   await requireManager();
   const categoryId = Number(formData.get("categoryId"));
   const name = String(formData.get("name") || "").trim();
+  const unitPrice = Math.max(0, Number(formData.get("unitPrice")) || 0);
   if (!categoryId || !name) return { success: false, error: "Item name is required." };
 
   const { rows } = await sql`
     SELECT COALESCE(MAX(display_order), 0) + 1 AS next FROM items WHERE category_id = ${categoryId};
   `;
   const { rows: itemRows } = await sql`
-    INSERT INTO items (category_id, name, display_order, is_active)
-    VALUES (${categoryId}, ${name}, ${rows[0].next}, true)
+    INSERT INTO items (category_id, name, unit_price, display_order, is_active)
+    VALUES (${categoryId}, ${name}, ${unitPrice}, ${rows[0].next}, true)
     RETURNING id;
   `;
   await sql`INSERT INTO inventory (item_id, quantity) VALUES (${itemRows[0].id}, 0);`;
@@ -81,8 +82,9 @@ export async function updateItemAction(
   await requireManager();
   const id = Number(formData.get("id"));
   const name = String(formData.get("name") || "").trim();
+  const unitPrice = Math.max(0, Number(formData.get("unitPrice")) || 0);
   if (!id || !name) return { success: false, error: "Name is required." };
-  await sql`UPDATE items SET name = ${name} WHERE id = ${id};`;
+  await sql`UPDATE items SET name = ${name}, unit_price = ${unitPrice} WHERE id = ${id};`;
   revalidatePath(PATH);
   return { success: true };
 }

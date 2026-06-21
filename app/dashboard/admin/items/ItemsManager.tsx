@@ -16,6 +16,7 @@ import {
 export interface AdminItem {
   id: number;
   name: string;
+  unitPrice: number;
   isActive: boolean;
 }
 export interface AdminCategory {
@@ -201,6 +202,16 @@ export default function ItemsManager({
                         >
                           <input type="hidden" name="id" value={it.id} />
                           <input name="name" defaultValue={it.name} className="input flex-1" required />
+                          <span className="text-sm text-charcoal/50">$</span>
+                          <input
+                            name="unitPrice"
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            defaultValue={it.unitPrice}
+                            className="input w-24"
+                            title="Average market price"
+                          />
                           <button className="btn-primary px-3 py-1.5 text-sm">Save</button>
                           <button
                             type="button"
@@ -218,6 +229,9 @@ export default function ItemsManager({
                             }`}
                           >
                             {it.name}
+                            <span className="ml-2 text-xs font-semibold text-gold">
+                              ${it.unitPrice.toFixed(2)}
+                            </span>
                           </span>
                           <div className="flex gap-1">
                             <button
@@ -268,6 +282,16 @@ export default function ItemsManager({
                 >
                   <input type="hidden" name="categoryId" value={cat.id} />
                   <input name="name" placeholder="New item name…" className="input flex-1" required />
+                  <span className="text-sm text-charcoal/50">$</span>
+                  <input
+                    name="unitPrice"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    placeholder="0.00"
+                    className="input w-24"
+                    title="Average market price"
+                  />
                   <button className="btn-primary px-3 py-2 text-sm">+ Add Item</button>
                 </form>
               </div>

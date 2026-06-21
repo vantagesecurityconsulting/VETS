@@ -32,6 +32,7 @@ export async function createTables(): Promise<void> {
       id SERIAL PRIMARY KEY,
       category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
       name TEXT NOT NULL,
+      unit_price NUMERIC(10,2) NOT NULL DEFAULT 0,
       display_order INTEGER NOT NULL DEFAULT 0,
       is_active BOOLEAN NOT NULL DEFAULT true,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -125,8 +126,8 @@ export async function seedCatalog(): Promise<void> {
     let itemOrder = 0;
     for (const itemName of cat.items) {
       const itemResult = await sql`
-        INSERT INTO items (category_id, name, display_order, is_active)
-        VALUES (${categoryId}, ${itemName}, ${itemOrder}, true)
+        INSERT INTO items (category_id, name, unit_price, display_order, is_active)
+        VALUES (${categoryId}, ${itemName}, ${cat.price}, ${itemOrder}, true)
         RETURNING id;
       `;
       const itemId = itemResult.rows[0].id as number;
@@ -165,20 +166,24 @@ export async function resetCatalog(): Promise<void> {
 let initialized = false;
 
 /**
- * Ensure the database schema exists and is seeded. Safe to call on every
- * request — it returns immediately once initialization has been confirmed.
- * This lets the app self-initialize the first time it is used, so visiting
- * /api/setup manually is optional.
+ * Lightweight, idempotent schema migrations for existing databases.
+ * (CREATE TABLE IF NOT EXISTS does not add new columns to existing tables.)
+ */
+export async function runMigrations(): Promise<void> {
+  await sql`ALTER TABLE items ADD COLUMN IF NOT EXISTS unit_price NUMERIC(10,2) NOT NULL DEFAULT 0;`;
+}
+
+/**
+ * Ensure the database schema exists, is migrated, and is seeded. Safe to call
+ * on every request — it does its work once per warm instance. This lets the
+ * app self-initialize the first time it is used, so visiting /api/setup
+ * manually is optional.
  */
 export async function ensureInitialized(): Promise<void> {
   if (initialized) return;
-  if (await tablesExist()) {
-    // Tables already created in a previous run/instance.
-    initialized = true;
-    return;
-  }
-  await createTables();
-  // Only seed if there are no users yet (guards against a partial create).
+  await createTables(); // idempotent (CREATE TABLE IF NOT EXISTS)
+  await runMigrations(); // idempotent (ADD COLUMN IF NOT EXISTS)
+  // Only seed if there are no users yet.
   const { rows } = await sql`SELECT COUNT(*)::int AS count FROM users;`;
   if (rows[0].count === 0) {
     await seedData();

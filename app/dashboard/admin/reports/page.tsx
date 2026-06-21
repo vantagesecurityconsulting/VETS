@@ -10,6 +10,9 @@ import {
   expiryReport,
   volunteerActivityReport,
   pointsUsageReport,
+  valueByClientReport,
+  donatedValueTotal,
+  distributedValueTotal,
 } from "@/lib/reports";
 import ReportControls from "./ReportControls";
 
@@ -59,6 +62,13 @@ function Table({ columns, rows }: { columns: Column[]; rows: any[] }) {
 
 function fmtDate(v: any) {
   return v ? new Date(v).toLocaleString() : "—";
+}
+
+function fmtMoney(v: any) {
+  return Number(v ?? 0).toLocaleString("en-CA", {
+    style: "currency",
+    currency: "CAD",
+  });
 }
 
 export default async function ReportsPage({
@@ -118,16 +128,55 @@ export default async function ReportsPage({
       break;
     }
     case "donations": {
-      const rows = await donationsReport(range);
+      const [rows, total] = await Promise.all([
+        donationsReport(range),
+        donatedValueTotal(range),
+      ]);
       content = (
-        <Table
-          rows={rows}
-          columns={[
-            { key: "item_name", label: "Item" },
-            { key: "category_name", label: "Category" },
-            { key: "total", label: "Received" },
-          ]}
-        />
+        <>
+          <div className="mt-4 rounded-xl border border-gold/30 bg-gold/10 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-charcoal/60">
+              Total value donated ({range.label})
+            </p>
+            <p className="text-3xl font-bold text-navy">{fmtMoney(total)}</p>
+          </div>
+          <Table
+            rows={rows}
+            columns={[
+              { key: "item_name", label: "Item" },
+              { key: "category_name", label: "Category" },
+              { key: "total", label: "Received" },
+              { key: "value", label: "Value", format: fmtMoney },
+            ]}
+          />
+        </>
+      );
+      break;
+    }
+    case "value-clients": {
+      const [rows, distributed] = await Promise.all([
+        valueByClientReport(range),
+        distributedValueTotal(range),
+      ]);
+      content = (
+        <>
+          <div className="mt-4 rounded-xl border border-gold/30 bg-gold/10 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-charcoal/60">
+              Total value given to clients ({range.label})
+            </p>
+            <p className="text-3xl font-bold text-navy">{fmtMoney(distributed)}</p>
+          </div>
+          <Table
+            rows={rows}
+            columns={[
+              { key: "client_name", label: "Client" },
+              { key: "client_id", label: "Client ID" },
+              { key: "visits", label: "Visits" },
+              { key: "items", label: "Items" },
+              { key: "value", label: "Value Received", format: fmtMoney },
+            ]}
+          />
+        </>
       );
       break;
     }
@@ -235,6 +284,7 @@ export default async function ReportsPage({
             { key: "client_id", label: "Client ID" },
             { key: "items", label: "Items" },
             { key: "points", label: "Points" },
+            { key: "value", label: "Value", format: fmtMoney },
             { key: "volunteer", label: "Volunteer" },
           ]}
         />

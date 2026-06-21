@@ -14,6 +14,7 @@ export default async function ItemsPage() {
       c.display_order AS cat_order,
       i.id AS item_id,
       i.name AS item_name,
+      i.unit_price,
       i.is_active,
       i.display_order AS item_order
     FROM categories c
@@ -37,6 +38,7 @@ export default async function ItemsPage() {
       cat.items.push({
         id: r.item_id,
         name: r.item_name,
+        unitPrice: Number(r.unit_price),
         isActive: r.is_active,
       });
     }

@@ -11,6 +11,7 @@ const REPORTS = [
   { key: "expiry", label: "Expiry" },
   { key: "volunteers", label: "Volunteer Activity" },
   { key: "points", label: "Points Usage" },
+  { key: "value-clients", label: "Value by Client" },
 ];
 
 const RANGES = [
