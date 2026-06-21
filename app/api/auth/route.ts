@@ -6,6 +6,7 @@ import {
   isValidPinFormat,
   verifyPin,
 } from "@/lib/auth";
+import { ensureInitialized } from "@/lib/init";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,10 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    // Auto-create and seed the database the first time the app is used,
+    // so visiting /api/setup manually is optional.
+    await ensureInitialized();
+
     // PINs are hashed, so compare against each active user.
     const { rows } = await sql`
       SELECT id, name, pin, role, must_change_pin
