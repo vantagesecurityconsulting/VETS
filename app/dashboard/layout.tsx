@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireAuth } from "@/lib/auth";
 import LogoutButton from "@/components/LogoutButton";
 import NavLink from "@/components/NavLink";
+import { APP_VERSION } from "@/lib/version";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +74,7 @@ export default async function DashboardLayout({
 
       <footer className="border-t border-black/5 py-6 text-center text-xs text-charcoal/50">
         VETS Canada — Dartmouth Food Bank · Proudly Supported by DriveX
+        <span className="ml-2 text-charcoal/30">{APP_VERSION}</span>
       </footer>
     </div>
   );
