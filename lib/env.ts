@@ -2,6 +2,7 @@
  * Environment variable validation.
  * Throws a clear error at import time if required variables are missing or invalid.
  */
+import "./db-env"; // normalize DATABASE_URL -> POSTGRES_URL before validating
 
 function requireEnv(name: string, opts?: { minLength?: number }): string {
   const value = process.env[name];

@@ -1,3 +1,4 @@
+import "./db-env";
 import { sql } from "@vercel/postgres";
 
 /**
