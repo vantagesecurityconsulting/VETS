@@ -29,33 +29,56 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // PINs are hashed, so compare against each active user.
-  const { rows } = await sql`
-    SELECT id, name, pin, role, must_change_pin
-    FROM users
-    WHERE is_active = true;
-  `;
+  try {
+    // PINs are hashed, so compare against each active user.
+    const { rows } = await sql`
+      SELECT id, name, pin, role, must_change_pin
+      FROM users
+      WHERE is_active = true;
+    `;
 
-  for (const user of rows) {
-    if (await verifyPin(pin, user.pin)) {
-      await createSession({
-        userId: user.id,
-        name: user.name,
-        role: user.role,
-        mustChangePin: user.must_change_pin,
-      });
-      return NextResponse.json({
-        success: true,
-        role: user.role,
-        mustChangePin: user.must_change_pin,
-      });
+    for (const user of rows) {
+      if (await verifyPin(pin, user.pin)) {
+        await createSession({
+          userId: user.id,
+          name: user.name,
+          role: user.role,
+          mustChangePin: user.must_change_pin,
+        });
+        return NextResponse.json({
+          success: true,
+          role: user.role,
+          mustChangePin: user.must_change_pin,
+        });
+      }
     }
-  }
 
-  return NextResponse.json(
-    { error: "Incorrect PIN. Please try again." },
-    { status: 401 }
-  );
+    return NextResponse.json(
+      { error: "Incorrect PIN. Please try again." },
+      { status: 401 }
+    );
+  } catch (err) {
+    const message = (err as Error).message || "Unknown server error.";
+    console.error("Login failed:", message);
+
+    // Translate common setup problems into actionable guidance.
+    let hint = message;
+    if (/relation "?users"? does not exist/i.test(message)) {
+      hint =
+        "Database not initialized. Visit /api/setup once to create the tables, then try again.";
+    } else if (/POSTGRES_URL/i.test(message)) {
+      hint =
+        "Database is not connected. Add a Vercel Postgres database (POSTGRES_URL) to the project.";
+    } else if (/SESSION_SECRET/i.test(message)) {
+      hint =
+        "SESSION_SECRET is missing or too short. Add a 32+ character SESSION_SECRET env var in Vercel, then redeploy.";
+    }
+
+    return NextResponse.json(
+      { error: `Server error: ${hint}` },
+      { status: 500 }
+    );
+  }
 }
 
 /**
