@@ -2,7 +2,16 @@
 
 import { useMemo, useState } from "react";
 import type { CatalogCategory } from "@/lib/queries";
-import { submitCountAction, type CountLineInput } from "./actions";
+import {
+  submitCountAction,
+  type CountLineInput,
+  type NewCountItemInput,
+} from "./actions";
+
+interface NewCountState {
+  name: string;
+  quantity: string;
+}
 
 export default function CountForm({
   catalog,
@@ -11,6 +20,8 @@ export default function CountForm({
 }) {
   const [categoryId, setCategoryId] = useState<number | "all">("all");
   const [counts, setCounts] = useState<Record<number, string>>({});
+  // Custom typed-in items, keyed by category id.
+  const [newItems, setNewItems] = useState<Record<number, NewCountState>>({});
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -25,9 +36,24 @@ export default function CountForm({
   }, [catalog, categoryId]);
 
   const entered = useMemo(
-    () => Object.values(counts).filter((v) => v.trim() !== "").length,
-    [counts]
+    () =>
+      Object.values(counts).filter((v) => v.trim() !== "").length +
+      Object.values(newItems).filter(
+        (n) => n.name.trim() !== "" && n.quantity.trim() !== ""
+      ).length,
+    [counts, newItems]
   );
+
+  const updateNew = (categoryId: number, patch: Partial<NewCountState>) => {
+    setNewItems((prev) => ({
+      ...prev,
+      [categoryId]: {
+        name: prev[categoryId]?.name ?? "",
+        quantity: prev[categoryId]?.quantity ?? "",
+        ...patch,
+      },
+    }));
+  };
 
   const submit = async () => {
     setSaving(true);
@@ -38,7 +64,14 @@ export default function CountForm({
         itemId: Number(id),
         countedQuantity: Math.max(0, Number(v) || 0),
       }));
-    const res = await submitCountAction(lines, notes);
+    const newPayload: NewCountItemInput[] = Object.entries(newItems)
+      .filter(([, n]) => n.name.trim() !== "" && n.quantity.trim() !== "")
+      .map(([catId, n]) => ({
+        categoryId: Number(catId),
+        name: n.name.trim(),
+        countedQuantity: Math.max(0, Number(n.quantity) || 0),
+      }));
+    const res = await submitCountAction(lines, notes, newPayload);
     if (!res.success) {
       setError(res.error || "Could not save count.");
       setSaving(false);
@@ -53,6 +86,7 @@ export default function CountForm({
 
   const reset = () => {
     setCounts({});
+    setNewItems({});
     setNotes("");
     setDone(null);
     setError("");
@@ -146,6 +180,26 @@ export default function CountForm({
                   />
                 </div>
               ))}
+            </div>
+
+            {/* Add a custom item to this category by typing a name + count */}
+            <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-navy/30 bg-white p-2.5">
+              <input
+                type="text"
+                placeholder={`Add another ${cat.name.toLowerCase()} item…`}
+                value={newItems[cat.id]?.name ?? ""}
+                onChange={(e) => updateNew(cat.id, { name: e.target.value })}
+                className="min-w-[8rem] flex-1 rounded-md border border-navy/20 px-2 py-1.5 text-sm"
+              />
+              <input
+                type="number"
+                min={0}
+                inputMode="numeric"
+                placeholder="qty"
+                value={newItems[cat.id]?.quantity ?? ""}
+                onChange={(e) => updateNew(cat.id, { quantity: e.target.value })}
+                className="w-20 rounded-md border border-navy/20 px-2 py-1.5 text-center text-sm"
+              />
             </div>
           </div>
         ))}
