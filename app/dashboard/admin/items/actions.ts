@@ -2,6 +2,7 @@
 
 import { sql } from "@/lib/db";
 import { requireManager } from "@/lib/auth";
+import { resetCatalog } from "@/lib/init";
 import { revalidatePath } from "next/cache";
 
 export interface ActionResult {
@@ -10,6 +11,18 @@ export interface ActionResult {
 }
 
 const PATH = "/dashboard/admin/items";
+
+/**
+ * Wipe the catalog and stock/transaction history and reload the default
+ * food-bank basics. Manager only. Does not affect users or clients.
+ */
+export async function resetCatalogAction(): Promise<ActionResult> {
+  await requireManager();
+  await resetCatalog();
+  revalidatePath(PATH);
+  revalidatePath("/dashboard/admin/inventory");
+  return { success: true };
+}
 
 export async function createCategoryAction(
   formData: FormData

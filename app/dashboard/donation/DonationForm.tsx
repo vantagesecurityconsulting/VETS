@@ -2,9 +2,19 @@
 
 import { useMemo, useState } from "react";
 import type { CatalogCategory } from "@/lib/queries";
-import { logDonationAction, type DonationLineInput } from "./actions";
+import {
+  logDonationAction,
+  type DonationLineInput,
+  type NewItemInput,
+} from "./actions";
 
 interface LineState {
+  quantity: number;
+  expiry: string;
+}
+
+interface NewItemState {
+  name: string;
   quantity: number;
   expiry: string;
 }
@@ -15,6 +25,8 @@ export default function DonationForm({
   catalog: CatalogCategory[];
 }) {
   const [lines, setLines] = useState<Record<number, LineState>>({});
+  // Custom typed-in items, keyed by category id.
+  const [newItems, setNewItems] = useState<Record<number, NewItemState>>({});
   const [notes, setNotes] = useState("");
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
@@ -37,8 +49,13 @@ export default function DonationForm({
   }, [catalog, search]);
 
   const totalQty = useMemo(
-    () => Object.values(lines).reduce((s, l) => s + (l.quantity || 0), 0),
-    [lines]
+    () =>
+      Object.values(lines).reduce((s, l) => s + (l.quantity || 0), 0) +
+      Object.values(newItems).reduce(
+        (s, n) => s + (n.name.trim() && n.quantity > 0 ? n.quantity : 0),
+        0
+      ),
+    [lines, newItems]
   );
 
   const update = (itemId: number, patch: Partial<LineState>) => {
@@ -47,6 +64,18 @@ export default function DonationForm({
       [itemId]: {
         quantity: prev[itemId]?.quantity ?? 0,
         expiry: prev[itemId]?.expiry ?? "",
+        ...patch,
+      },
+    }));
+  };
+
+  const updateNew = (categoryId: number, patch: Partial<NewItemState>) => {
+    setNewItems((prev) => ({
+      ...prev,
+      [categoryId]: {
+        name: prev[categoryId]?.name ?? "",
+        quantity: prev[categoryId]?.quantity ?? 0,
+        expiry: prev[categoryId]?.expiry ?? "",
         ...patch,
       },
     }));
@@ -62,7 +91,15 @@ export default function DonationForm({
         quantity: l.quantity,
         expiryDate: l.expiry || null,
       }));
-    const res = await logDonationAction(payload, notes);
+    const newPayload: NewItemInput[] = Object.entries(newItems)
+      .filter(([, n]) => n.name.trim() !== "" && n.quantity > 0)
+      .map(([catId, n]) => ({
+        categoryId: Number(catId),
+        name: n.name.trim(),
+        quantity: n.quantity,
+        expiryDate: n.expiry || null,
+      }));
+    const res = await logDonationAction(payload, notes, newPayload);
     if (!res.success) {
       setError(res.error || "Could not save donation.");
       setSaving(false);
@@ -74,6 +111,7 @@ export default function DonationForm({
 
   const reset = () => {
     setLines({});
+    setNewItems({});
     setNotes("");
     setSearch("");
     setDone(null);
@@ -180,6 +218,59 @@ export default function DonationForm({
                   </div>
                 );
               })}
+            </div>
+
+            {/* Add a custom item to this category by typing a name + amount */}
+            <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-navy/30 bg-white p-2.5">
+              <input
+                type="text"
+                placeholder={`Add another ${cat.name.toLowerCase()} item…`}
+                value={newItems[cat.id]?.name ?? ""}
+                onChange={(e) => updateNew(cat.id, { name: e.target.value })}
+                className="min-w-[8rem] flex-1 rounded-md border border-navy/20 px-2 py-1.5 text-sm"
+              />
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateNew(cat.id, {
+                      quantity: Math.max(0, (newItems[cat.id]?.quantity ?? 0) - 1),
+                    })
+                  }
+                  className="h-8 w-8 rounded-md bg-white text-lg font-bold text-navy shadow-sm"
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  min={0}
+                  value={newItems[cat.id]?.quantity ?? 0}
+                  onChange={(e) =>
+                    updateNew(cat.id, {
+                      quantity: Math.max(0, Number(e.target.value) || 0),
+                    })
+                  }
+                  className="w-14 rounded-md border border-navy/20 px-1 py-1 text-center text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateNew(cat.id, {
+                      quantity: (newItems[cat.id]?.quantity ?? 0) + 1,
+                    })
+                  }
+                  className="h-8 w-8 rounded-md bg-navy text-lg font-bold text-white shadow-sm"
+                >
+                  +
+                </button>
+              </div>
+              <input
+                type="date"
+                value={newItems[cat.id]?.expiry ?? ""}
+                onChange={(e) => updateNew(cat.id, { expiry: e.target.value })}
+                className="rounded-md border border-navy/20 px-2 py-1 text-sm text-charcoal"
+                title="Expiry date (optional)"
+              />
             </div>
           </div>
         ))}

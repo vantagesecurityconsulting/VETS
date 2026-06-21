@@ -51,6 +51,12 @@ export async function submitCountAction(
       INSERT INTO transaction_items (transaction_id, item_id, quantity, point_value_at_time)
       VALUES (${transactionId}, ${l.itemId}, ${l.countedQuantity}, 0);
     `;
+    // A physical count is the source of truth — set inventory to the counted amount.
+    await sql`
+      UPDATE inventory
+      SET quantity = ${l.countedQuantity}, last_updated = now()
+      WHERE item_id = ${l.itemId};
+    `;
   }
 
   return { success: true, recorded: lines.length, discrepancies };

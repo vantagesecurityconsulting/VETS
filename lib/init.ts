@@ -96,16 +96,22 @@ export async function createTables(): Promise<void> {
 }
 
 /**
- * Seed the default manager and the full catalog. Assumes empty tables.
+ * Seed the default manager account. Assumes an empty users table.
  */
-export async function seedData(): Promise<void> {
+export async function seedManager(): Promise<void> {
   // Default manager (PIN 0000, must change on first login)
   const managerPin = await hashPin("0000");
   await sql`
     INSERT INTO users (name, pin, role, must_change_pin, is_active)
     VALUES ('Manager', ${managerPin}, 'manager', true, true);
   `;
+}
 
+/**
+ * Seed the catalog (categories + items + zero-quantity inventory rows).
+ * Assumes the catalog tables are empty.
+ */
+export async function seedCatalog(): Promise<void> {
   let catOrder = 0;
   for (const cat of SEED_CATEGORIES) {
     const { rows } = await sql`
@@ -131,6 +137,27 @@ export async function seedData(): Promise<void> {
       `;
     }
   }
+}
+
+/**
+ * Seed the default manager and the full catalog. Assumes empty tables.
+ */
+export async function seedData(): Promise<void> {
+  await seedManager();
+  await seedCatalog();
+}
+
+/**
+ * Wipe the catalog and all stock/transaction history, then reload the
+ * default catalog. Manager-triggered. Does NOT touch user or client accounts.
+ */
+export async function resetCatalog(): Promise<void> {
+  // Deleting transactions cascades to transaction_items; deleting categories
+  // cascades to items -> inventory / transaction_items / audit_counts.
+  await sql`DELETE FROM transactions;`;
+  await sql`DELETE FROM audit_counts;`;
+  await sql`DELETE FROM categories;`;
+  await seedCatalog();
 }
 
 // In-memory guard so a single warm serverless instance doesn't re-check on

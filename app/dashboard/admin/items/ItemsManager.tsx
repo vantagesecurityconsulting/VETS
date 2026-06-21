@@ -10,6 +10,7 @@ import {
   toggleItemActiveAction,
   moveCategoryAction,
   moveItemAction,
+  resetCatalogAction,
 } from "./actions";
 
 export interface AdminItem {
@@ -53,9 +54,25 @@ export default function ItemsManager({
         <h1 className="font-heading text-2xl font-bold text-navy">
           Items & Categories
         </h1>
-        <button onClick={() => setShowAddCat((s) => !s)} className="btn-primary">
-          {showAddCat ? "Cancel" : "+ Add Category"}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              if (
+                confirm(
+                  "Reset the catalog to the default food-bank list? This clears all current items, stock levels, and donation/count history. Clients and volunteer accounts are NOT affected."
+                )
+              ) {
+                run(() => resetCatalogAction());
+              }
+            }}
+            className="btn-outline"
+          >
+            Reset to Default List
+          </button>
+          <button onClick={() => setShowAddCat((s) => !s)} className="btn-primary">
+            {showAddCat ? "Cancel" : "+ Add Category"}
+          </button>
+        </div>
       </div>
 
       {error && (
