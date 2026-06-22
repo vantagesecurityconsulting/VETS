@@ -30,6 +30,57 @@ function defaultBudget(familySize: number) {
   return 60 + (Math.max(1, familySize) - 1) * 5;
 }
 
+/**
+ * Family size + credit budget inputs. The budget auto-updates whenever the
+ * family size changes (and can still be overridden manually).
+ */
+function BudgetFields({
+  initialSize,
+  initialBudget,
+}: {
+  initialSize: number;
+  initialBudget?: number;
+}) {
+  const [sizeStr, setSizeStr] = useState(String(initialSize));
+  const [budgetStr, setBudgetStr] = useState(
+    String(initialBudget ?? defaultBudget(initialSize))
+  );
+  return (
+    <>
+      <div>
+        <label className="label">Number of people in household</label>
+        <input
+          name="familySize"
+          type="number"
+          min={1}
+          value={sizeStr}
+          onChange={(e) => {
+            setSizeStr(e.target.value);
+            const n = parseInt(e.target.value, 10);
+            if (!isNaN(n) && n >= 1) setBudgetStr(String(defaultBudget(n)));
+          }}
+          className="input"
+        />
+      </div>
+      <div>
+        <label className="label">Credits (auto-calculated)</label>
+        <input
+          name="pointBudget"
+          type="number"
+          min={0}
+          value={budgetStr}
+          onChange={(e) => setBudgetStr(e.target.value)}
+          className="input"
+        />
+        <p className="mt-1 text-xs text-charcoal/50">
+          60 + 5 per additional member. Auto-updates with household size; edit to
+          override.
+        </p>
+      </div>
+    </>
+  );
+}
+
 export default function ClientsManager({ clients }: { clients: ClientRow[] }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -156,14 +207,7 @@ export default function ClientsManager({ clients }: { clients: ClientRow[] }) {
             <label className="label">Name (head of household)</label>
             <input name="name" className="input" required />
           </div>
-          <div>
-            <label className="label">Family Size</label>
-            <input name="familySize" type="number" min={1} defaultValue={1} className="input" />
-          </div>
-          <div>
-            <label className="label">Point Budget (blank = auto)</label>
-            <input name="pointBudget" type="number" min={0} placeholder="auto: 60" className="input" />
-          </div>
+          <BudgetFields initialSize={1} />
           <div className="sm:col-span-2">
             <button className="btn-primary w-full">Save Client</button>
             <p className="mt-1 text-xs text-charcoal/50">
@@ -194,17 +238,7 @@ export default function ClientsManager({ clients }: { clients: ClientRow[] }) {
                   <label className="label">Name</label>
                   <input name="name" defaultValue={c.name} className="input" required />
                 </div>
-                <div>
-                  <label className="label">Family Size</label>
-                  <input name="familySize" type="number" min={1} defaultValue={c.familySize} className="input" />
-                </div>
-                <div>
-                  <label className="label">Point Budget</label>
-                  <input name="pointBudget" type="number" min={0} defaultValue={c.pointBudget} className="input" />
-                  <p className="mt-1 text-xs text-charcoal/50">
-                    Auto for this family size: {defaultBudget(c.familySize)}
-                  </p>
-                </div>
+                <BudgetFields initialSize={c.familySize} initialBudget={c.pointBudget} />
                 <div className="flex items-end gap-2">
                   <button className="btn-primary flex-1">Save</button>
                   <button type="button" onClick={() => setEditId(null)} className="btn-outline">
@@ -271,9 +305,16 @@ export default function ClientsManager({ clients }: { clients: ClientRow[] }) {
                                 {m.gender ? ` · ${m.gender}` : ""}
                                 {m.serviceNumber ? ` · SN ${m.serviceNumber}` : ""}
                               </span>
-                              {(m.address || m.contact) && (
+                              {(m.address || m.contact || m.email) && (
                                 <span className="block text-xs text-charcoal/50">
-                                  {[m.address, m.contact].filter(Boolean).join(" · ")}
+                                  {[m.contact, m.email, m.address]
+                                    .filter(Boolean)
+                                    .join(" · ")}
+                                </span>
+                              )}
+                              {m.notes && (
+                                <span className="block text-xs font-semibold text-military">
+                                  ⚠ {m.notes}
                                 </span>
                               )}
                             </div>
@@ -289,12 +330,18 @@ export default function ClientsManager({ clients }: { clients: ClientRow[] }) {
                     )}
                     <form action={addMember} className="mt-3 grid gap-2 sm:grid-cols-3">
                       <input type="hidden" name="clientId" value={c.id} />
-                      <input name="name" placeholder="Name" className="input" />
+                      <input name="name" placeholder="Full name" className="input" />
                       <input name="dob" type="date" className="input" title="Date of birth" />
                       <input name="gender" placeholder="Gender" className="input" />
                       <input name="serviceNumber" placeholder="Service number" className="input" />
-                      <input name="contact" placeholder="Contact info" className="input" />
-                      <input name="address" placeholder="Address" className="input" />
+                      <input name="contact" placeholder="Contact number" className="input" />
+                      <input name="email" type="email" placeholder="Email" className="input" />
+                      <input name="address" placeholder="Address" className="input sm:col-span-3" />
+                      <input
+                        name="notes"
+                        placeholder="Allergies / important notes"
+                        className="input sm:col-span-3"
+                      />
                       <div className="sm:col-span-3">
                         <button className="btn-primary text-sm">+ Add Member</button>
                       </div>

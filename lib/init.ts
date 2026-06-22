@@ -93,7 +93,9 @@ export async function createTables(): Promise<void> {
       gender TEXT,
       address TEXT,
       contact TEXT,
+      email TEXT,
       service_number TEXT,
+      notes TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `;
@@ -275,6 +277,9 @@ export async function runMigrations(): Promise<void> {
   // Client archive fields.
   await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS archive_reason TEXT;`;
   await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;`;
+  // Family member extra fields.
+  await sql`ALTER TABLE family_members ADD COLUMN IF NOT EXISTS email TEXT;`;
+  await sql`ALTER TABLE family_members ADD COLUMN IF NOT EXISTS notes TEXT;`;
   // Volunteer profile fields.
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS emergency_contact TEXT;`;
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS availability TEXT;`;

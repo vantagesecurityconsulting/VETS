@@ -94,7 +94,9 @@ export interface FamilyMember {
   gender: string | null;
   address: string | null;
   contact: string | null;
+  email: string | null;
   serviceNumber: string | null;
+  notes: string | null;
 }
 
 export async function getFamilyMembersAction(
@@ -102,7 +104,7 @@ export async function getFamilyMembersAction(
 ): Promise<FamilyMember[]> {
   await requireManager();
   const { rows } = await sql`
-    SELECT id, name, date_of_birth, gender, address, contact, service_number
+    SELECT id, name, date_of_birth, gender, address, contact, email, service_number, notes
     FROM family_members WHERE client_id = ${clientId} ORDER BY id;
   `;
   return rows.map((r) => ({
@@ -112,7 +114,9 @@ export async function getFamilyMembersAction(
     gender: r.gender,
     address: r.address,
     contact: r.contact,
+    email: r.email,
     serviceNumber: r.service_number,
+    notes: r.notes,
   }));
 }
 
@@ -128,10 +132,11 @@ export async function addFamilyMemberAction(
   };
   await sql`
     INSERT INTO family_members
-      (client_id, name, date_of_birth, gender, address, contact, service_number)
+      (client_id, name, date_of_birth, gender, address, contact, email, service_number, notes)
     VALUES (
       ${clientId}, ${get("name")}, ${get("dob")}::date, ${get("gender")},
-      ${get("address")}, ${get("contact")}, ${get("serviceNumber")}
+      ${get("address")}, ${get("contact")}, ${get("email")},
+      ${get("serviceNumber")}, ${get("notes")}
     );
   `;
   revalidatePath("/dashboard/admin/clients");
