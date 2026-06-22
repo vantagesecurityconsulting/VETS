@@ -2,7 +2,7 @@
 
 import { sql } from "@/lib/db";
 import { requireManager } from "@/lib/auth";
-import { resetCatalog } from "@/lib/init";
+import { resetCatalog, recomputeItemPrice } from "@/lib/init";
 import { revalidatePath } from "next/cache";
 
 export interface ActionResult {
@@ -88,6 +88,37 @@ export async function updateItemAction(
   if (!id || !name) return { success: false, error: "Name is required." };
   await sql`UPDATE items SET name = ${name}, unit_price = ${unitPrice}, unit_weight = ${unitWeight} WHERE id = ${id};`;
   revalidatePath(PATH);
+  return { success: true };
+}
+
+export async function addItemPriceAction(
+  itemId: number,
+  store: string,
+  price: number
+): Promise<ActionResult> {
+  await requireManager();
+  const s = store.trim();
+  if (!itemId || !s) return { success: false, error: "Store name is required." };
+  await sql`
+    INSERT INTO item_prices (item_id, store, price)
+    VALUES (${itemId}, ${s}, ${Math.max(0, price || 0)});
+  `;
+  await recomputeItemPrice(itemId);
+  revalidatePath(PATH);
+  revalidatePath("/dashboard/admin/inventory");
+  return { success: true };
+}
+
+export async function deleteItemPriceAction(
+  priceId: number
+): Promise<ActionResult> {
+  await requireManager();
+  const { rows } = await sql`
+    DELETE FROM item_prices WHERE id = ${priceId} RETURNING item_id;
+  `;
+  if (rows[0]?.item_id) await recomputeItemPrice(rows[0].item_id);
+  revalidatePath(PATH);
+  revalidatePath("/dashboard/admin/inventory");
   return { success: true };
 }
 

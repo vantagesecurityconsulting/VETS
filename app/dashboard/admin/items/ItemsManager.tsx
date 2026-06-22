@@ -12,14 +12,32 @@ import {
   moveCategoryAction,
   moveItemAction,
   resetCatalogAction,
+  addItemPriceAction,
+  deleteItemPriceAction,
 } from "./actions";
 
+const STORES = [
+  "Wholesale Club",
+  "Walmart",
+  "No Frills",
+  "Superstore",
+  "Giant Tiger",
+  "Dollarstore",
+  "Other",
+];
+
+export interface StorePriceRow {
+  id: number;
+  store: string;
+  price: number;
+}
 export interface AdminItem {
   id: number;
   name: string;
   unitPrice: number;
   unitWeight: number;
   isActive: boolean;
+  prices: StorePriceRow[];
 }
 export interface AdminCategory {
   id: number;
@@ -39,6 +57,7 @@ export default function ItemsManager({
   const [openCat, setOpenCat] = useState<number | null>(null);
   const [editCat, setEditCat] = useState<number | null>(null);
   const [editItem, setEditItem] = useState<number | null>(null);
+  const [priceItem, setPriceItem] = useState<number | null>(null);
   const [showAddCat, setShowAddCat] = useState(false);
 
   const refresh = () => router.refresh();
@@ -187,8 +206,8 @@ export default function ItemsManager({
               <div className="mt-3 border-t border-black/5 pt-3">
                 <div className="space-y-1.5">
                   {cat.items.map((it, ii) => (
+                    <div key={it.id}>
                     <div
-                      key={it.id}
                       className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-offwhite px-2 py-1.5"
                     >
                       {editItem === it.id ? (
@@ -244,6 +263,11 @@ export default function ItemsManager({
                             <span className="ml-2 text-xs font-semibold text-gold">
                               ${it.unitPrice.toFixed(2)}
                             </span>
+                            {it.prices.length > 0 && (
+                              <span className="ml-1 text-[10px] text-charcoal/40">
+                                (avg of {it.prices.length})
+                              </span>
+                            )}
                             <span className="ml-2 text-xs font-semibold text-charcoal/50">
                               {it.unitWeight} {WEIGHT_UNIT}
                             </span>
@@ -264,6 +288,14 @@ export default function ItemsManager({
                               ↓
                             </button>
                             <button
+                              onClick={() =>
+                                setPriceItem(priceItem === it.id ? null : it.id)
+                              }
+                              className="rounded border border-navy/20 px-2 py-1 text-xs font-semibold text-navy"
+                            >
+                              Prices ({it.prices.length})
+                            </button>
+                            <button
                               onClick={() => setEditItem(it.id)}
                               className="rounded border border-navy/20 px-2 py-1 text-xs font-semibold text-navy"
                             >
@@ -282,6 +314,77 @@ export default function ItemsManager({
                           </div>
                         </>
                       )}
+                    </div>
+                    {priceItem === it.id && (
+                      <div className="ml-2 mt-1 rounded-md border border-navy/15 bg-white p-2.5">
+                        <p className="mb-1 text-xs font-semibold text-navy">
+                          Store prices (average becomes the item price)
+                        </p>
+                        {it.prices.length === 0 && (
+                          <p className="text-xs text-charcoal/40">
+                            No store prices yet.
+                          </p>
+                        )}
+                        <div className="flex flex-wrap gap-1.5">
+                          {it.prices.map((p) => (
+                            <span
+                              key={p.id}
+                              className="inline-flex items-center gap-1 rounded-full bg-offwhite px-2 py-0.5 text-xs"
+                            >
+                              {p.store}: ${p.price.toFixed(2)}
+                              <button
+                                onClick={() =>
+                                  run(() => deleteItemPriceAction(p.id))
+                                }
+                                className="text-military"
+                                title="Remove"
+                              >
+                                ✕
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                        <form
+                          action={async (fd) => {
+                            setError("");
+                            const res = await addItemPriceAction(
+                              it.id,
+                              String(fd.get("store") || ""),
+                              Number(fd.get("price")) || 0
+                            );
+                            if (!res.success)
+                              return setError(res.error || "Failed.");
+                            refresh();
+                          }}
+                          className="mt-2 flex flex-wrap items-center gap-2"
+                        >
+                          <select
+                            name="store"
+                            className="rounded-md border border-navy/20 px-2 py-1 text-sm"
+                            defaultValue={STORES[0]}
+                          >
+                            {STORES.map((s) => (
+                              <option key={s} value={s}>
+                                {s}
+                              </option>
+                            ))}
+                          </select>
+                          <span className="text-sm text-charcoal/50">$</span>
+                          <input
+                            name="price"
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            placeholder="0.00"
+                            className="w-24 rounded-md border border-navy/20 px-2 py-1 text-sm"
+                            required
+                          />
+                          <button className="btn-primary px-3 py-1 text-sm">
+                            + Add price
+                          </button>
+                        </form>
+                      </div>
+                    )}
                     </div>
                   ))}
                 </div>

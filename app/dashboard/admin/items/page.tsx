@@ -42,9 +42,24 @@ export default async function ItemsPage() {
         unitPrice: Number(r.unit_price),
         unitWeight: Number(r.unit_weight),
         isActive: r.is_active,
+        prices: [],
       });
     }
   }
 
-  return <ItemsManager categories={Array.from(map.values())} />;
+  // Attach store prices to each item.
+  const { rows: priceRows } = await sql`
+    SELECT id, item_id, store, price FROM item_prices ORDER BY store;
+  `;
+  const itemIndex = new Map<number, { id: number; store: string; price: number }[]>();
+  const cats = Array.from(map.values());
+  for (const cat of cats) {
+    for (const it of cat.items) itemIndex.set(it.id, it.prices);
+  }
+  for (const p of priceRows) {
+    const arr = itemIndex.get(p.item_id);
+    if (arr) arr.push({ id: p.id, store: p.store, price: Number(p.price) });
+  }
+
+  return <ItemsManager categories={cats} />;
 }

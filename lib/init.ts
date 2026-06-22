@@ -2,6 +2,7 @@ import "server-only";
 import { sql, tablesExist } from "@/lib/db";
 import { hashPin } from "@/lib/auth";
 import { SEED_CATEGORIES } from "@/lib/seed-data";
+import { matchPrices, average } from "@/lib/pricebook";
 
 /**
  * Create all application tables (idempotent — safe to call repeatedly).
@@ -46,6 +47,15 @@ export async function createTables(): Promise<void> {
       quantity INTEGER NOT NULL DEFAULT 0,
       expiry_date DATE,
       last_updated TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS item_prices (
+      id SERIAL PRIMARY KEY,
+      item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+      store TEXT NOT NULL,
+      price NUMERIC(10,2) NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `;
   await sql`
@@ -126,9 +136,13 @@ export async function seedCatalog(): Promise<void> {
 
     let itemOrder = 0;
     for (const itemName of cat.items) {
+      // Pre-fill store prices from the price book where we can match.
+      const storePrices = matchPrices(cat.name, itemName) ?? [];
+      const unitPrice = average(storePrices);
+
       const itemResult = await sql`
         INSERT INTO items (category_id, name, unit_price, unit_weight, display_order, is_active)
-        VALUES (${categoryId}, ${itemName}, ${cat.price}, ${cat.weight}, ${itemOrder}, true)
+        VALUES (${categoryId}, ${itemName}, ${unitPrice}, ${cat.weight}, ${itemOrder}, true)
         RETURNING id;
       `;
       const itemId = itemResult.rows[0].id as number;
@@ -137,7 +151,27 @@ export async function seedCatalog(): Promise<void> {
         INSERT INTO inventory (item_id, quantity, expiry_date)
         VALUES (${itemId}, 0, NULL);
       `;
+      for (const sp of storePrices) {
+        await sql`
+          INSERT INTO item_prices (item_id, store, price)
+          VALUES (${itemId}, ${sp.store}, ${sp.price});
+        `;
+      }
     }
+  }
+}
+
+/**
+ * Recompute an item's unit_price as the average of its store prices.
+ * If it has no store prices, the existing unit_price is left untouched.
+ */
+export async function recomputeItemPrice(itemId: number): Promise<void> {
+  const { rows } = await sql`
+    SELECT COALESCE(ROUND(AVG(price), 2), 0) AS avg, COUNT(*)::int AS n
+    FROM item_prices WHERE item_id = ${itemId};
+  `;
+  if ((rows[0]?.n ?? 0) > 0) {
+    await sql`UPDATE items SET unit_price = ${rows[0].avg} WHERE id = ${itemId};`;
   }
 }
 
