@@ -81,7 +81,8 @@ export async function valueByClientReport(range: DateRange) {
       cl.client_id,
       COUNT(DISTINCT t.id)::int AS visits,
       COALESCE(SUM(ti.quantity), 0)::int AS items,
-      COALESCE(ROUND(SUM(ti.quantity * i.unit_price), 2), 0) AS value
+      COALESCE(ROUND(SUM(ti.quantity * i.unit_price), 2), 0) AS value,
+      COALESCE(ROUND(SUM(ti.quantity * i.unit_weight), 2), 0) AS weight
     FROM transactions t
     JOIN clients cl ON cl.id = t.client_id
     LEFT JOIN transaction_items ti ON ti.transaction_id = t.id
@@ -120,6 +121,55 @@ export async function distributedValueTotal(range: DateRange): Promise<number> {
       AND t.created_at BETWEEN ${start} AND ${end};
   `;
   return Number(rows[0]?.value ?? 0);
+}
+
+// Total weight for a given transaction type in the period (gov reporting).
+async function weightTotalForType(
+  range: DateRange,
+  type: "stock_in" | "stock_out" | "waste"
+): Promise<number> {
+  const { start, end } = bounds(range);
+  const { rows } = await sql`
+    SELECT COALESCE(ROUND(SUM(ti.quantity * i.unit_weight), 2), 0) AS weight
+    FROM transaction_items ti
+    JOIN transactions t ON t.id = ti.transaction_id
+    JOIN items i ON i.id = ti.item_id
+    WHERE t.type = ${type}
+      AND t.created_at BETWEEN ${start} AND ${end};
+  `;
+  return Number(rows[0]?.weight ?? 0);
+}
+
+export function donatedWeightTotal(range: DateRange) {
+  return weightTotalForType(range, "stock_in");
+}
+export function distributedWeightTotal(range: DateRange) {
+  return weightTotalForType(range, "stock_out");
+}
+
+// Write-off / waste report
+export async function wasteReport(range: DateRange) {
+  const { start, end } = bounds(range);
+  const { rows } = await sql`
+    SELECT
+      t.created_at,
+      t.notes AS reason,
+      u.name AS volunteer,
+      i.name AS item_name,
+      c.name AS category_name,
+      ti.quantity,
+      ROUND(ti.quantity * i.unit_price, 2) AS value,
+      ROUND(ti.quantity * i.unit_weight, 2) AS weight
+    FROM transactions t
+    JOIN transaction_items ti ON ti.transaction_id = t.id
+    JOIN items i ON i.id = ti.item_id
+    JOIN categories c ON c.id = i.category_id
+    LEFT JOIN users u ON u.id = t.volunteer_id
+    WHERE t.type = 'waste'
+      AND t.created_at BETWEEN ${start} AND ${end}
+    ORDER BY t.created_at DESC;
+  `;
+  return rows;
 }
 
 // 2. Top Items Report
@@ -170,7 +220,8 @@ export async function donationsReport(range: DateRange) {
       i.name AS item_name,
       c.name AS category_name,
       SUM(ti.quantity)::int AS total,
-      ROUND(SUM(ti.quantity * i.unit_price), 2) AS value
+      ROUND(SUM(ti.quantity * i.unit_price), 2) AS value,
+      ROUND(SUM(ti.quantity * i.unit_weight), 2) AS weight
     FROM transaction_items ti
     JOIN transactions t ON t.id = ti.transaction_id
     JOIN items i ON i.id = ti.item_id

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { WEIGHT_UNIT } from "@/lib/units";
 import { updateInventoryAction } from "./actions";
 
 export interface InvRow {
@@ -10,6 +11,7 @@ export interface InvRow {
   categoryName: string;
   quantity: number;
   unitPrice: number;
+  unitWeight: number;
   expiryDate: string | null;
 }
 
@@ -73,6 +75,10 @@ export default function InventoryManager({ rows }: { rows: InvRow[] }) {
     () => filtered.reduce((sum, r) => sum + r.quantity * r.unitPrice, 0),
     [filtered]
   );
+  const totalWeight = useMemo(
+    () => rows.reduce((sum, r) => sum + r.quantity * r.unitWeight, 0),
+    [rows]
+  );
 
   const money = (n: number) =>
     n.toLocaleString("en-CA", { style: "currency", currency: "CAD" });
@@ -84,9 +90,9 @@ export default function InventoryManager({ rows }: { rows: InvRow[] }) {
         Edit stock levels and expiry dates. Colours flag low stock and expiry.
       </p>
 
-      {/* Total inventory value (for insurance / records) */}
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gold/30 bg-gold/10 p-4">
-        <div>
+      {/* Total inventory value + weight (for insurance / gov records) */}
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="rounded-xl border border-gold/30 bg-gold/10 p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-charcoal/60">
             Total value of current inventory
           </p>
@@ -95,14 +101,18 @@ export default function InventoryManager({ rows }: { rows: InvRow[] }) {
             Estimated from average market prices — useful for insurance records.
           </p>
         </div>
-        {Math.abs(filteredValue - totalValue) > 0.001 && (
-          <div className="text-right">
-            <p className="text-xs font-semibold uppercase tracking-wide text-charcoal/60">
-              Filtered subtotal
-            </p>
-            <p className="text-xl font-bold text-navy">{money(filteredValue)}</p>
-          </div>
-        )}
+        <div className="rounded-xl border border-navy/20 bg-navy/5 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-charcoal/60">
+            Total weight of current inventory
+          </p>
+          <p className="text-3xl font-bold text-navy">
+            {totalWeight.toLocaleString("en-CA", { maximumFractionDigits: 1 })}{" "}
+            {WEIGHT_UNIT}
+          </p>
+          <p className="text-xs text-charcoal/50">
+            Useful for government / poundage reporting.
+          </p>
+        </div>
       </div>
 
       <div className="mt-4 flex flex-wrap items-end gap-3">
@@ -158,6 +168,7 @@ export default function InventoryManager({ rows }: { rows: InvRow[] }) {
               <th className="px-3 py-2">Qty</th>
               <th className="px-3 py-2">Price</th>
               <th className="px-3 py-2">Value</th>
+              <th className="px-3 py-2">Weight</th>
               <th className="px-3 py-2">Status</th>
               <th className="px-3 py-2">Expiry</th>
               <th className="px-3 py-2"></th>
@@ -168,7 +179,7 @@ export default function InventoryManager({ rows }: { rows: InvRow[] }) {
               const badge = stockBadge(r.quantity, lowThreshold);
               return editId === r.itemId ? (
                 <tr key={r.itemId} className="border-t border-black/5 bg-navy/5">
-                  <td colSpan={8} className="px-3 py-2">
+                  <td colSpan={9} className="px-3 py-2">
                     <form
                       action={async (fd) => {
                         await updateInventoryAction(fd);
@@ -219,6 +230,12 @@ export default function InventoryManager({ rows }: { rows: InvRow[] }) {
                   <td className="px-3 py-2 text-charcoal/70">{money(r.unitPrice)}</td>
                   <td className="px-3 py-2 font-semibold text-navy">
                     {money(r.quantity * r.unitPrice)}
+                  </td>
+                  <td className="px-3 py-2 text-charcoal/70">
+                    {(r.quantity * r.unitWeight).toLocaleString("en-CA", {
+                      maximumFractionDigits: 1,
+                    })}{" "}
+                    {WEIGHT_UNIT}
                   </td>
                   <td className="px-3 py-2">
                     <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${badge.cls}`}>

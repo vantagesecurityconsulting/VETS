@@ -13,7 +13,11 @@ import {
   valueByClientReport,
   donatedValueTotal,
   distributedValueTotal,
+  donatedWeightTotal,
+  distributedWeightTotal,
+  wasteReport,
 } from "@/lib/reports";
+import { WEIGHT_UNIT } from "@/lib/units";
 import ReportControls from "./ReportControls";
 
 export const dynamic = "force-dynamic";
@@ -69,6 +73,12 @@ function fmtMoney(v: any) {
     style: "currency",
     currency: "CAD",
   });
+}
+
+function fmtWeight(v: any) {
+  return `${Number(v ?? 0).toLocaleString("en-CA", {
+    maximumFractionDigits: 1,
+  })} ${WEIGHT_UNIT}`;
 }
 
 export default async function ReportsPage({
@@ -128,17 +138,26 @@ export default async function ReportsPage({
       break;
     }
     case "donations": {
-      const [rows, total] = await Promise.all([
+      const [rows, total, weight] = await Promise.all([
         donationsReport(range),
         donatedValueTotal(range),
+        donatedWeightTotal(range),
       ]);
       content = (
         <>
-          <div className="mt-4 rounded-xl border border-gold/30 bg-gold/10 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-charcoal/60">
-              Total value donated ({range.label})
-            </p>
-            <p className="text-3xl font-bold text-navy">{fmtMoney(total)}</p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-gold/30 bg-gold/10 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-charcoal/60">
+                Total value donated ({range.label})
+              </p>
+              <p className="text-3xl font-bold text-navy">{fmtMoney(total)}</p>
+            </div>
+            <div className="rounded-xl border border-navy/20 bg-navy/5 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-charcoal/60">
+                Total weight donated ({range.label})
+              </p>
+              <p className="text-3xl font-bold text-navy">{fmtWeight(weight)}</p>
+            </div>
           </div>
           <Table
             rows={rows}
@@ -147,6 +166,7 @@ export default async function ReportsPage({
               { key: "category_name", label: "Category" },
               { key: "total", label: "Received" },
               { key: "value", label: "Value", format: fmtMoney },
+              { key: "weight", label: "Weight", format: fmtWeight },
             ]}
           />
         </>
@@ -154,17 +174,26 @@ export default async function ReportsPage({
       break;
     }
     case "value-clients": {
-      const [rows, distributed] = await Promise.all([
+      const [rows, distributed, distWeight] = await Promise.all([
         valueByClientReport(range),
         distributedValueTotal(range),
+        distributedWeightTotal(range),
       ]);
       content = (
         <>
-          <div className="mt-4 rounded-xl border border-gold/30 bg-gold/10 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-charcoal/60">
-              Total value given to clients ({range.label})
-            </p>
-            <p className="text-3xl font-bold text-navy">{fmtMoney(distributed)}</p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-gold/30 bg-gold/10 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-charcoal/60">
+                Total value given to clients ({range.label})
+              </p>
+              <p className="text-3xl font-bold text-navy">{fmtMoney(distributed)}</p>
+            </div>
+            <div className="rounded-xl border border-navy/20 bg-navy/5 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-charcoal/60">
+                Total weight given to clients ({range.label})
+              </p>
+              <p className="text-3xl font-bold text-navy">{fmtWeight(distWeight)}</p>
+            </div>
           </div>
           <Table
             rows={rows}
@@ -174,9 +203,29 @@ export default async function ReportsPage({
               { key: "visits", label: "Visits" },
               { key: "items", label: "Items" },
               { key: "value", label: "Value Received", format: fmtMoney },
+              { key: "weight", label: "Weight", format: fmtWeight },
             ]}
           />
         </>
+      );
+      break;
+    }
+    case "waste": {
+      const rows = await wasteReport(range);
+      content = (
+        <Table
+          rows={rows}
+          columns={[
+            { key: "created_at", label: "Date", format: fmtDate },
+            { key: "category_name", label: "Category" },
+            { key: "item_name", label: "Item" },
+            { key: "quantity", label: "Qty" },
+            { key: "reason", label: "Reason" },
+            { key: "value", label: "Value", format: fmtMoney },
+            { key: "weight", label: "Weight", format: fmtWeight },
+            { key: "volunteer", label: "By" },
+          ]}
+        />
       );
       break;
     }

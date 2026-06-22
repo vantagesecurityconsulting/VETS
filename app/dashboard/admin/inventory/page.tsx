@@ -11,6 +11,7 @@ export default async function InventoryPage() {
       i.id AS item_id,
       i.name AS item_name,
       i.unit_price,
+      i.unit_weight,
       c.name AS category_name,
       COALESCE(inv.quantity, 0) AS quantity,
       inv.expiry_date
@@ -26,6 +27,7 @@ export default async function InventoryPage() {
     categoryName: r.category_name,
     quantity: r.quantity,
     unitPrice: Number(r.unit_price),
+    unitWeight: Number(r.unit_weight),
     expiryDate: r.expiry_date ? String(r.expiry_date) : null,
   }));
 

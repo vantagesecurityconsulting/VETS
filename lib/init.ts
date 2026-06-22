@@ -33,6 +33,7 @@ export async function createTables(): Promise<void> {
       category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
       name TEXT NOT NULL,
       unit_price NUMERIC(10,2) NOT NULL DEFAULT 0,
+      unit_weight NUMERIC(10,3) NOT NULL DEFAULT 0,
       display_order INTEGER NOT NULL DEFAULT 0,
       is_active BOOLEAN NOT NULL DEFAULT true,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -61,7 +62,7 @@ export async function createTables(): Promise<void> {
   await sql`
     CREATE TABLE IF NOT EXISTS transactions (
       id SERIAL PRIMARY KEY,
-      type TEXT NOT NULL CHECK (type IN ('stock_in', 'stock_out', 'audit')),
+      type TEXT NOT NULL CHECK (type IN ('stock_in', 'stock_out', 'audit', 'waste')),
       client_id INTEGER REFERENCES clients(id) ON DELETE SET NULL,
       volunteer_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
       notes TEXT,
@@ -126,8 +127,8 @@ export async function seedCatalog(): Promise<void> {
     let itemOrder = 0;
     for (const itemName of cat.items) {
       const itemResult = await sql`
-        INSERT INTO items (category_id, name, unit_price, display_order, is_active)
-        VALUES (${categoryId}, ${itemName}, ${cat.price}, ${itemOrder}, true)
+        INSERT INTO items (category_id, name, unit_price, unit_weight, display_order, is_active)
+        VALUES (${categoryId}, ${itemName}, ${cat.price}, ${cat.weight}, ${itemOrder}, true)
         RETURNING id;
       `;
       const itemId = itemResult.rows[0].id as number;
@@ -171,6 +172,14 @@ let initialized = false;
  */
 export async function runMigrations(): Promise<void> {
   await sql`ALTER TABLE items ADD COLUMN IF NOT EXISTS unit_price NUMERIC(10,2) NOT NULL DEFAULT 0;`;
+  await sql`ALTER TABLE items ADD COLUMN IF NOT EXISTS unit_weight NUMERIC(10,3) NOT NULL DEFAULT 0;`;
+  // Allow the 'waste' transaction type (write-offs) on existing databases.
+  await sql`ALTER TABLE transactions DROP CONSTRAINT IF EXISTS transactions_type_check;`;
+  await sql`
+    ALTER TABLE transactions
+    ADD CONSTRAINT transactions_type_check
+    CHECK (type IN ('stock_in', 'stock_out', 'audit', 'waste'));
+  `;
 }
 
 /**

@@ -53,6 +53,7 @@ export default async function DashboardLayout({
             <NavLink href="/dashboard/visit">Client Visit</NavLink>
             <NavLink href="/dashboard/donation">Log Donation</NavLink>
             <NavLink href="/dashboard/count">Stock Count</NavLink>
+            <NavLink href="/dashboard/waste">Write-Off</NavLink>
             {isManager && (
               <>
                 <span className="mx-1 self-center text-black/20">|</span>

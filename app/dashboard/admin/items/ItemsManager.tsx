@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { WEIGHT_UNIT } from "@/lib/units";
 import {
   createCategoryAction,
   updateCategoryAction,
@@ -17,6 +18,7 @@ export interface AdminItem {
   id: number;
   name: string;
   unitPrice: number;
+  unitWeight: number;
   isActive: boolean;
 }
 export interface AdminCategory {
@@ -209,9 +211,19 @@ export default function ItemsManager({
                             min={0}
                             step="0.01"
                             defaultValue={it.unitPrice}
-                            className="input w-24"
+                            className="input w-20"
                             title="Average market price"
                           />
+                          <input
+                            name="unitWeight"
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            defaultValue={it.unitWeight}
+                            className="input w-20"
+                            title={`Weight per item (${WEIGHT_UNIT})`}
+                          />
+                          <span className="text-xs text-charcoal/50">{WEIGHT_UNIT}</span>
                           <button className="btn-primary px-3 py-1.5 text-sm">Save</button>
                           <button
                             type="button"
@@ -231,6 +243,9 @@ export default function ItemsManager({
                             {it.name}
                             <span className="ml-2 text-xs font-semibold text-gold">
                               ${it.unitPrice.toFixed(2)}
+                            </span>
+                            <span className="ml-2 text-xs font-semibold text-charcoal/50">
+                              {it.unitWeight} {WEIGHT_UNIT}
                             </span>
                           </span>
                           <div className="flex gap-1">
@@ -289,8 +304,17 @@ export default function ItemsManager({
                     min={0}
                     step="0.01"
                     placeholder="0.00"
-                    className="input w-24"
+                    className="input w-20"
                     title="Average market price"
+                  />
+                  <input
+                    name="unitWeight"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    placeholder={`wt ${WEIGHT_UNIT}`}
+                    className="input w-20"
+                    title={`Weight per item (${WEIGHT_UNIT})`}
                   />
                   <button className="btn-primary px-3 py-2 text-sm">+ Add Item</button>
                 </form>

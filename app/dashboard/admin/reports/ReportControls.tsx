@@ -12,6 +12,7 @@ const REPORTS = [
   { key: "volunteers", label: "Volunteer Activity" },
   { key: "points", label: "Points Usage" },
   { key: "value-clients", label: "Value by Client" },
+  { key: "waste", label: "Write-Offs" },
 ];
 
 const RANGES = [

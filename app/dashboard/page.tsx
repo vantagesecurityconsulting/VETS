@@ -22,6 +22,12 @@ const actions = [
     desc: "Do a physical count and flag discrepancies.",
     accent: "bg-gold",
   },
+  {
+    href: "/dashboard/waste",
+    title: "Write-Off",
+    desc: "Remove damaged or expired stock.",
+    accent: "bg-military",
+  },
 ];
 
 export default async function VolunteerHome() {
@@ -34,7 +40,7 @@ export default async function VolunteerHome() {
       </h1>
       <p className="mt-1 text-charcoal/70">What would you like to do?</p>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-3">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {actions.map((a) => (
           <Link
             key={a.href}
