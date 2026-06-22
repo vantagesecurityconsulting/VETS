@@ -5,7 +5,9 @@ import {
   getExpiringItems,
   getLifetimeTotals,
   getCreditSnapshot,
+  getInactiveClients,
   DEFAULT_EXPIRY_THRESHOLD_DAYS,
+  DEFAULT_INACTIVE_DAYS,
 } from "@/lib/admin-queries";
 import { WEIGHT_UNIT } from "@/lib/units";
 import ExpiryAlert from "@/components/ExpiryAlert";
@@ -17,6 +19,8 @@ const adminLinks = [
   { href: "/dashboard/admin/inventory", title: "Inventory", desc: "Stock levels & expiry tracking" },
   { href: "/dashboard/admin/items", title: "Items & Categories", desc: "Manage catalog & point values" },
   { href: "/dashboard/admin/volunteers", title: "Volunteers", desc: "Manage accounts & PINs" },
+  { href: "/dashboard/admin/expenses", title: "Expenses", desc: "Track money spent & where it goes" },
+  { href: "/dashboard/admin/entries", title: "Entries & Corrections", desc: "Fix entries made in error" },
   { href: "/dashboard/admin/reports", title: "Reports", desc: "Full reporting suite" },
 ];
 
@@ -44,11 +48,12 @@ const number = (n: number) => n.toLocaleString("en-CA");
 
 export default async function AdminHome() {
   await requireManager();
-  const [stats, expiring, lifetime, credits] = await Promise.all([
+  const [stats, expiring, lifetime, credits, inactive] = await Promise.all([
     getOverviewStats(),
     getExpiringItems(DEFAULT_EXPIRY_THRESHOLD_DAYS),
     getLifetimeTotals(),
     getCreditSnapshot(),
+    getInactiveClients(DEFAULT_INACTIVE_DAYS),
   ]);
 
   const coverage =
@@ -169,12 +174,56 @@ export default async function AdminHome() {
           </div>
         </div>
 
-        <div>
-          <h2 className="mb-3 font-heading text-lg font-bold text-navy">
-            Expiring Soon
-          </h2>
-          <div className="card">
-            <ExpiryAlert items={expiring} />
+        <div className="space-y-6">
+          <div>
+            <h2 className="mb-3 font-heading text-lg font-bold text-navy">
+              Expiring Soon
+            </h2>
+            <div className="card">
+              <ExpiryAlert items={expiring} />
+            </div>
+          </div>
+
+          <div>
+            <h2 className="mb-3 font-heading text-lg font-bold text-navy">
+              Check-In Needed
+            </h2>
+            <div className="card">
+              {inactive.length === 0 ? (
+                <p className="text-sm text-charcoal/50">
+                  Everyone&apos;s been in recently. 👍
+                </p>
+              ) : (
+                <>
+                  <p className="mb-2 text-xs text-charcoal/50">
+                    Active families not seen in {DEFAULT_INACTIVE_DAYS}+ days —
+                    consider checking in.
+                  </p>
+                  <ul className="divide-y divide-black/5">
+                    {inactive.map((c) => (
+                      <li
+                        key={c.id}
+                        className="flex items-center justify-between gap-3 py-2 text-sm"
+                      >
+                        <span>
+                          <span className="font-medium text-charcoal">
+                            {c.name}
+                          </span>
+                          <span className="block text-xs text-charcoal/50">
+                            {c.clientId}
+                          </span>
+                        </span>
+                        <span className="shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-700">
+                          {c.daysSince === null
+                            ? "never visited"
+                            : `${c.daysSince}d ago`}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>

@@ -16,6 +16,10 @@ import {
   donatedWeightTotal,
   distributedWeightTotal,
   wasteReport,
+  mostNeededReport,
+  clientActivityReport,
+  expensesReport,
+  expenseTotal,
 } from "@/lib/reports";
 import { WEIGHT_UNIT } from "@/lib/units";
 import ReportControls from "./ReportControls";
@@ -204,6 +208,86 @@ export default async function ReportsPage({
               { key: "items", label: "Items" },
               { key: "value", label: "Value Received", format: fmtMoney },
               { key: "weight", label: "Weight", format: fmtWeight },
+            ]}
+          />
+        </>
+      );
+      break;
+    }
+    case "most-needed": {
+      const rows = await mostNeededReport();
+      content = (
+        <>
+          <p className="mt-4 text-sm text-charcoal/60">
+            Low / out-of-stock items, ranked by recent demand — share this with
+            donors when they ask what&apos;s needed.
+          </p>
+          <Table
+            rows={rows}
+            columns={[
+              { key: "item_name", label: "Item" },
+              { key: "category_name", label: "Category" },
+              { key: "quantity", label: "In Stock" },
+              { key: "given_30d", label: "Given (30d)" },
+            ]}
+          />
+        </>
+      );
+      break;
+    }
+    case "client-activity": {
+      const rows = await clientActivityReport(60);
+      content = (
+        <>
+          <p className="mt-4 text-sm text-charcoal/60">
+            Visit frequency per active family. Rows flagged 🔔 haven&apos;t
+            visited in 60+ days (or never) — consider a check-in.
+          </p>
+          <Table
+            rows={rows}
+            columns={[
+              {
+                key: "client_name",
+                label: "Client",
+                format: (v, row) => (row.inactive ? `🔔 ${v}` : v),
+              },
+              { key: "client_id", label: "Client ID" },
+              { key: "family_size", label: "Family" },
+              { key: "visits", label: "Visits" },
+              { key: "last_visit", label: "Last Visit", format: (v) => (v ? new Date(v).toLocaleDateString() : "never") },
+              {
+                key: "days_since",
+                label: "Days Since",
+                format: (v) => (v === null ? "—" : v),
+              },
+            ]}
+          />
+        </>
+      );
+      break;
+    }
+    case "expenses": {
+      const [rows, total] = await Promise.all([
+        expensesReport(range),
+        expenseTotal(range),
+      ]);
+      content = (
+        <>
+          <div className="mt-4 rounded-xl border border-military/30 bg-military/10 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-charcoal/60">
+              Total expenses ({range.label})
+            </p>
+            <p className="text-3xl font-bold text-navy">{fmtMoney(total)}</p>
+          </div>
+          <Table
+            rows={rows}
+            columns={[
+              { key: "expense_date", label: "Date", format: (v) => (v ? new Date(v).toLocaleDateString() : "—") },
+              { key: "category", label: "Category" },
+              { key: "description", label: "Description" },
+              { key: "vendor", label: "Vendor" },
+              { key: "amount", label: "Amount", format: fmtMoney },
+              { key: "entered_by", label: "By" },
             ]}
           />
         </>

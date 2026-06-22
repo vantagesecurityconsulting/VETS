@@ -147,6 +147,97 @@ export function distributedWeightTotal(range: DateRange) {
   return weightTotalForType(range, "stock_out");
 }
 
+// Most-needed grocery list (for donors): low / out-of-stock items, ranked by
+// recent demand. Not date-filtered — it's a current snapshot.
+export async function mostNeededReport(lowThreshold = 5) {
+  const { rows } = await sql`
+    SELECT
+      i.name AS item_name,
+      c.name AS category_name,
+      COALESCE(inv.quantity, 0) AS quantity,
+      COALESCE(d.given, 0)::int AS given_30d
+    FROM items i
+    JOIN categories c ON c.id = i.category_id
+    LEFT JOIN inventory inv ON inv.item_id = i.id
+    LEFT JOIN (
+      SELECT ti.item_id, SUM(ti.quantity) AS given
+      FROM transaction_items ti
+      JOIN transactions t ON t.id = ti.transaction_id
+      WHERE t.type = 'stock_out' AND t.created_at >= now() - interval '30 days'
+      GROUP BY ti.item_id
+    ) d ON d.item_id = i.id
+    WHERE i.is_active = true
+      AND COALESCE(inv.quantity, 0) <= ${lowThreshold}
+    ORDER BY COALESCE(d.given, 0) DESC, COALESCE(inv.quantity, 0) ASC, c.name, i.name
+    LIMIT 100;
+  `;
+  return rows;
+}
+
+// Client visit frequency + inactivity. Not date-filtered (lifetime view).
+export async function clientActivityReport(inactiveDays = 60) {
+  const { rows } = await sql`
+    SELECT
+      cl.name AS client_name,
+      cl.client_id,
+      cl.family_size,
+      COUNT(t.id)::int AS visits,
+      MAX(t.created_at) AS last_visit,
+      CASE WHEN MAX(t.created_at) IS NULL THEN NULL
+           ELSE (CURRENT_DATE - MAX(t.created_at)::date) END AS days_since
+    FROM clients cl
+    LEFT JOIN transactions t
+      ON t.client_id = cl.id AND t.type = 'stock_out'
+    WHERE cl.is_active = true
+    GROUP BY cl.id, cl.name, cl.client_id, cl.family_size
+    ORDER BY days_since DESC NULLS FIRST, cl.name;
+  `;
+  return rows.map((r) => ({
+    ...r,
+    inactive:
+      r.days_since === null || Number(r.days_since) >= inactiveDays,
+  }));
+}
+
+// Expenses report (money spent), date-filtered.
+export async function expensesReport(range: DateRange) {
+  const { start, end } = bounds(range);
+  const { rows } = await sql`
+    SELECT
+      e.expense_date,
+      e.category,
+      e.description,
+      e.vendor,
+      e.amount,
+      u.name AS entered_by
+    FROM expenses e
+    LEFT JOIN users u ON u.id = e.created_by
+    WHERE e.expense_date BETWEEN ${range.from} AND ${range.to}
+    ORDER BY e.expense_date DESC, e.id DESC;
+  `;
+  return rows;
+}
+
+export async function expensesByCategory(range: DateRange) {
+  const { rows } = await sql`
+    SELECT e.category, ROUND(SUM(e.amount), 2) AS total
+    FROM expenses e
+    WHERE e.expense_date BETWEEN ${range.from} AND ${range.to}
+    GROUP BY e.category
+    ORDER BY total DESC;
+  `;
+  return rows;
+}
+
+export async function expenseTotal(range: DateRange): Promise<number> {
+  const { rows } = await sql`
+    SELECT COALESCE(ROUND(SUM(amount), 2), 0) AS total
+    FROM expenses
+    WHERE expense_date BETWEEN ${range.from} AND ${range.to};
+  `;
+  return Number(rows[0]?.total ?? 0);
+}
+
 // Write-off / waste report
 export async function wasteReport(range: DateRange) {
   const { start, end } = bounds(range);

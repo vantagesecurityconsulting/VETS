@@ -100,11 +100,26 @@ export async function createTables(): Promise<void> {
     );
   `;
 
+  await sql`
+    CREATE TABLE IF NOT EXISTS expenses (
+      id SERIAL PRIMARY KEY,
+      expense_date DATE NOT NULL DEFAULT CURRENT_DATE,
+      category TEXT NOT NULL,
+      description TEXT,
+      vendor TEXT,
+      amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+      created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `;
+
   await sql`CREATE INDEX IF NOT EXISTS idx_items_category ON items(category_id);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_inventory_item ON inventory(item_id);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_txn_items_txn ON transaction_items(transaction_id);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_transactions_type ON transactions(type);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_audit_item ON audit_counts(item_id);`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_item_prices_item ON item_prices(item_id);`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(expense_date);`;
 }
 
 /**

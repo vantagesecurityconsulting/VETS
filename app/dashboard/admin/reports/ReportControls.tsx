@@ -13,6 +13,9 @@ const REPORTS = [
   { key: "points", label: "Points Usage" },
   { key: "value-clients", label: "Value by Client" },
   { key: "waste", label: "Write-Offs" },
+  { key: "most-needed", label: "Most Needed" },
+  { key: "client-activity", label: "Client Activity" },
+  { key: "expenses", label: "Expenses" },
 ];
 
 const RANGES = [

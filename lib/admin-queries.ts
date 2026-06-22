@@ -64,6 +64,45 @@ export async function getCreditSnapshot(): Promise<CreditSnapshot> {
   };
 }
 
+export const DEFAULT_INACTIVE_DAYS = 60;
+
+export interface InactiveClient {
+  id: number;
+  clientId: string;
+  name: string;
+  lastVisit: string | null;
+  daysSince: number | null;
+}
+
+/**
+ * Active clients who haven't shopped in `days`+ (or never), for check-ins.
+ */
+export async function getInactiveClients(
+  days = DEFAULT_INACTIVE_DAYS
+): Promise<InactiveClient[]> {
+  const { rows } = await sql.query(
+    `SELECT cl.id, cl.client_id, cl.name,
+            MAX(t.created_at) AS last_visit,
+            (CURRENT_DATE - MAX(t.created_at)::date) AS days_since
+     FROM clients cl
+     LEFT JOIN transactions t ON t.client_id = cl.id AND t.type = 'stock_out'
+     WHERE cl.is_active = true
+     GROUP BY cl.id, cl.client_id, cl.name
+     HAVING MAX(t.created_at) IS NULL
+        OR MAX(t.created_at)::date <= CURRENT_DATE - ($1::int)
+     ORDER BY days_since DESC NULLS FIRST
+     LIMIT 25`,
+    [days]
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    clientId: r.client_id,
+    name: r.name,
+    lastVisit: r.last_visit ? new Date(r.last_visit).toLocaleDateString() : null,
+    daysSince: r.days_since === null ? null : Number(r.days_since),
+  }));
+}
+
 export interface OverviewStats {
   clientsServedThisWeek: number;
   itemsDistributedThisWeek: number;
