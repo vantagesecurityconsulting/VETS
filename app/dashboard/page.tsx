@@ -28,6 +28,12 @@ const actions = [
     desc: "Remove damaged or expired stock.",
     accent: "bg-military",
   },
+  {
+    href: "/dashboard/schedule",
+    title: "Schedule",
+    desc: "Book shopping appointments.",
+    accent: "bg-navy",
+  },
 ];
 
 export default async function VolunteerHome() {

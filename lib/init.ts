@@ -129,6 +129,20 @@ export async function createTables(): Promise<void> {
   `;
 
   await sql`
+    CREATE TABLE IF NOT EXISTS appointments (
+      id SERIAL PRIMARY KEY,
+      client_id INTEGER REFERENCES clients(id) ON DELETE SET NULL,
+      client_name TEXT,
+      appt_date DATE NOT NULL,
+      appt_time TEXT,
+      status TEXT NOT NULL DEFAULT 'scheduled'
+        CHECK (status IN ('scheduled', 'completed', 'cancelled', 'no_show')),
+      notes TEXT,
+      created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `;
+  await sql`
     CREATE TABLE IF NOT EXISTS expenses (
       id SERIAL PRIMARY KEY,
       expense_date DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -148,6 +162,7 @@ export async function createTables(): Promise<void> {
   await sql`CREATE INDEX IF NOT EXISTS idx_audit_item ON audit_counts(item_id);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_item_prices_item ON item_prices(item_id);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(expense_date);`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(appt_date);`;
 }
 
 /**
