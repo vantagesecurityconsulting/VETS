@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/auth";
 import LogoutButton from "@/components/LogoutButton";
 import NavLink from "@/components/NavLink";
 import { APP_VERSION } from "@/lib/version";
+import { ensureInitialized } from "@/lib/init";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,10 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Make sure the schema is created/migrated before any page queries run.
+  // Cheap after the first call per server instance (in-memory guard).
+  await ensureInitialized();
+
   // Allow access even when a PIN change is pending so the change-pin page works.
   const session = await requireAuth({ allowMustChangePin: true });
   const isManager = session.role === "manager";
