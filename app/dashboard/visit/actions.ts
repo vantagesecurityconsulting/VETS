@@ -12,6 +12,29 @@ export async function searchClientsAction(
   return searchClients(term);
 }
 
+export interface MonthStatus {
+  shoppedThisMonth: boolean;
+  lastVisit: string | null;
+}
+
+/** Has this client already shopped in the current calendar month? */
+export async function getClientMonthStatusAction(
+  clientId: number
+): Promise<MonthStatus> {
+  await requireAuth();
+  const { rows } = await sql`
+    SELECT
+      MAX(created_at) AS last_visit,
+      COUNT(*) FILTER (WHERE created_at >= date_trunc('month', now()))::int AS this_month
+    FROM transactions
+    WHERE type = 'stock_out' AND client_id = ${clientId};
+  `;
+  return {
+    shoppedThisMonth: (rows[0]?.this_month ?? 0) > 0,
+    lastVisit: rows[0]?.last_visit ? new Date(rows[0].last_visit).toLocaleDateString() : null,
+  };
+}
+
 export interface VisitLineInput {
   itemId: number;
   quantity: number;

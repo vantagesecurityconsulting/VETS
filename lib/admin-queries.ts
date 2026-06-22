@@ -4,6 +4,66 @@ import { sql } from "@/lib/db";
 export const DEFAULT_EXPIRY_THRESHOLD_DAYS = 7;
 export const DEFAULT_LOW_STOCK_THRESHOLD = 5;
 
+export interface LifetimeTotals {
+  veteransHelped: number;
+  valueDistributed: number;
+  weightDistributed: number;
+}
+
+/** All-time impact: distinct veterans served, total $ and weight given out. */
+export async function getLifetimeTotals(): Promise<LifetimeTotals> {
+  const { rows: vetRows } = await sql`
+    SELECT COUNT(DISTINCT client_id)::int AS count
+    FROM transactions
+    WHERE type = 'stock_out' AND client_id IS NOT NULL;
+  `;
+  const { rows: valRows } = await sql`
+    SELECT
+      COALESCE(ROUND(SUM(ti.quantity * i.unit_price), 2), 0) AS value,
+      COALESCE(ROUND(SUM(ti.quantity * i.unit_weight), 2), 0) AS weight
+    FROM transaction_items ti
+    JOIN transactions t ON t.id = ti.transaction_id
+    JOIN items i ON i.id = ti.item_id
+    WHERE t.type = 'stock_out';
+  `;
+  return {
+    veteransHelped: vetRows[0]?.count ?? 0,
+    valueDistributed: Number(valRows[0]?.value ?? 0),
+    weightDistributed: Number(valRows[0]?.weight ?? 0),
+  };
+}
+
+export interface CreditSnapshot {
+  activeClients: number;
+  monthlyCreditsExpected: number; // sum of active client budgets (1 shop/month)
+  creditsOnHand: number; // total points-worth of current stock
+}
+
+/**
+ * Monthly credit snapshot. Recomputed on every dashboard load, so it always
+ * reflects the current inventory and client list.
+ */
+export async function getCreditSnapshot(): Promise<CreditSnapshot> {
+  const { rows: clientRows } = await sql`
+    SELECT
+      COUNT(*)::int AS active,
+      COALESCE(SUM(point_budget), 0)::int AS expected
+    FROM clients WHERE is_active = true;
+  `;
+  const { rows: stockRows } = await sql`
+    SELECT COALESCE(SUM(inv.quantity * c.point_value), 0)::int AS on_hand
+    FROM inventory inv
+    JOIN items i ON i.id = inv.item_id
+    JOIN categories c ON c.id = i.category_id
+    WHERE i.is_active = true;
+  `;
+  return {
+    activeClients: clientRows[0]?.active ?? 0,
+    monthlyCreditsExpected: clientRows[0]?.expected ?? 0,
+    creditsOnHand: stockRows[0]?.on_hand ?? 0,
+  };
+}
+
 export interface OverviewStats {
   clientsServedThisWeek: number;
   itemsDistributedThisWeek: number;

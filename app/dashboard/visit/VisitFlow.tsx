@@ -5,6 +5,7 @@ import type { CatalogCategory, ClientRecord } from "@/lib/queries";
 import {
   searchClientsAction,
   confirmVisitAction,
+  getClientMonthStatusAction,
   type VisitLineInput,
 } from "./actions";
 
@@ -20,6 +21,7 @@ export default function VisitFlow({
   const [results, setResults] = useState<ClientRecord[]>([]);
   const [searching, startSearch] = useTransition();
   const [client, setClient] = useState<ClientRecord | null>(null);
+  const [monthWarning, setMonthWarning] = useState<string | null>(null);
 
   // cart: itemId -> quantity
   const [cart, setCart] = useState<Record<number, number>>({});
@@ -118,6 +120,7 @@ export default function VisitFlow({
     setNotes("");
     setSummary(null);
     setError("");
+    setMonthWarning(null);
   };
 
   // ---------------------------------------------------------------- search
@@ -150,6 +153,16 @@ export default function VisitFlow({
               onClick={() => {
                 setClient(c);
                 setStep("build");
+                setMonthWarning(null);
+                getClientMonthStatusAction(c.id).then((s) => {
+                  if (s.shoppedThisMonth) {
+                    setMonthWarning(
+                      `${c.name} has already shopped this month${
+                        s.lastVisit ? ` (last visit ${s.lastVisit})` : ""
+                      }. Families get one visit per month — confirm only if a manager approves.`
+                    );
+                  }
+                });
               }}
               className="flex w-full items-center justify-between rounded-lg border border-black/5 bg-white p-4 text-left shadow-sm transition hover:border-navy/30"
             >
@@ -218,6 +231,12 @@ export default function VisitFlow({
           Change Client
         </button>
       </div>
+
+      {monthWarning && (
+        <p className="mt-4 rounded-md bg-amber-100 px-3 py-2 text-sm font-semibold text-amber-800">
+          ⚠️ {monthWarning}
+        </p>
+      )}
 
       {error && (
         <p className="mt-4 rounded-md bg-military/10 px-3 py-2 text-sm font-semibold text-military">
