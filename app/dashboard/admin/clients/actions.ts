@@ -60,12 +60,89 @@ export async function updateClientAction(
   return { success: true };
 }
 
-export async function toggleClientActiveAction(
+export async function archiveClientAction(
   id: number,
-  isActive: boolean
+  reason: string
 ): Promise<ActionResult> {
   await requireManager();
-  await sql`UPDATE clients SET is_active = ${isActive} WHERE id = ${id};`;
+  await sql`
+    UPDATE clients
+    SET is_active = false, archive_reason = ${reason || null}, archived_at = now()
+    WHERE id = ${id};
+  `;
+  revalidatePath("/dashboard/admin/clients");
+  return { success: true };
+}
+
+export async function reactivateClientAction(id: number): Promise<ActionResult> {
+  await requireManager();
+  await sql`
+    UPDATE clients
+    SET is_active = true, archive_reason = NULL, archived_at = NULL
+    WHERE id = ${id};
+  `;
+  revalidatePath("/dashboard/admin/clients");
+  return { success: true };
+}
+
+// ----------------------------- Family members -----------------------------
+
+export interface FamilyMember {
+  id: number;
+  name: string | null;
+  dateOfBirth: string | null;
+  gender: string | null;
+  address: string | null;
+  contact: string | null;
+  serviceNumber: string | null;
+}
+
+export async function getFamilyMembersAction(
+  clientId: number
+): Promise<FamilyMember[]> {
+  await requireManager();
+  const { rows } = await sql`
+    SELECT id, name, date_of_birth, gender, address, contact, service_number
+    FROM family_members WHERE client_id = ${clientId} ORDER BY id;
+  `;
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    dateOfBirth: r.date_of_birth ? String(r.date_of_birth) : null,
+    gender: r.gender,
+    address: r.address,
+    contact: r.contact,
+    serviceNumber: r.service_number,
+  }));
+}
+
+export async function addFamilyMemberAction(
+  formData: FormData
+): Promise<ActionResult> {
+  await requireManager();
+  const clientId = Number(formData.get("clientId"));
+  if (!clientId) return { success: false, error: "Missing client." };
+  const get = (k: string) => {
+    const v = String(formData.get(k) || "").trim();
+    return v === "" ? null : v;
+  };
+  await sql`
+    INSERT INTO family_members
+      (client_id, name, date_of_birth, gender, address, contact, service_number)
+    VALUES (
+      ${clientId}, ${get("name")}, ${get("dob")}::date, ${get("gender")},
+      ${get("address")}, ${get("contact")}, ${get("serviceNumber")}
+    );
+  `;
+  revalidatePath("/dashboard/admin/clients");
+  return { success: true };
+}
+
+export async function deleteFamilyMemberAction(
+  id: number
+): Promise<ActionResult> {
+  await requireManager();
+  await sql`DELETE FROM family_members WHERE id = ${id};`;
   revalidatePath("/dashboard/admin/clients");
   return { success: true };
 }

@@ -66,6 +66,21 @@ export async function createTables(): Promise<void> {
       family_size INTEGER NOT NULL DEFAULT 1,
       point_budget INTEGER NOT NULL,
       is_active BOOLEAN NOT NULL DEFAULT true,
+      archive_reason TEXT,
+      archived_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS family_members (
+      id SERIAL PRIMARY KEY,
+      client_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+      name TEXT,
+      date_of_birth DATE,
+      gender TEXT,
+      address TEXT,
+      contact TEXT,
+      service_number TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `;
@@ -229,6 +244,9 @@ export async function runMigrations(): Promise<void> {
     ADD CONSTRAINT transactions_type_check
     CHECK (type IN ('stock_in', 'stock_out', 'audit', 'waste'));
   `;
+  // Client archive fields.
+  await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS archive_reason TEXT;`;
+  await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;`;
 }
 
 /**
