@@ -3,6 +3,7 @@
 import { sql } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { searchClients, type ClientRecord } from "@/lib/queries";
+import { ensureInitialized } from "@/lib/init";
 import { revalidatePath } from "next/cache";
 
 export interface ActionResult {
@@ -33,10 +34,16 @@ export async function bookAppointmentAction(
   if (!clientId && !clientName)
     return { success: false, error: "Choose a client or enter a name." };
 
-  await sql`
-    INSERT INTO appointments (client_id, client_name, appt_date, appt_time, notes, created_by)
-    VALUES (${clientId}, ${clientName || null}, ${date}::date, ${time || null}, ${notes || null}, ${session.userId});
-  `;
+  try {
+    await ensureInitialized();
+    await sql`
+      INSERT INTO appointments (client_id, client_name, appt_date, appt_time, notes, created_by)
+      VALUES (${clientId}, ${clientName || null}, ${date}::date, ${time || null}, ${notes || null}, ${session.userId});
+    `;
+  } catch (err) {
+    console.error("Book appointment failed:", err);
+    return { success: false, error: `Could not save: ${(err as Error).message}` };
+  }
   revalidatePath("/dashboard/schedule");
   return { success: true };
 }
