@@ -16,6 +16,19 @@ export async function createTables(): Promise<void> {
       role TEXT NOT NULL CHECK (role IN ('manager', 'volunteer')),
       must_change_pin BOOLEAN NOT NULL DEFAULT false,
       is_active BOOLEAN NOT NULL DEFAULT true,
+      emergency_contact TEXT,
+      availability TEXT,
+      strengths TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS volunteer_log (
+      id SERIAL PRIMARY KEY,
+      volunteer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      log_date DATE NOT NULL DEFAULT CURRENT_DATE,
+      hours NUMERIC(5,2) NOT NULL DEFAULT 0,
+      note TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `;
@@ -247,6 +260,10 @@ export async function runMigrations(): Promise<void> {
   // Client archive fields.
   await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS archive_reason TEXT;`;
   await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;`;
+  // Volunteer profile fields.
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS emergency_contact TEXT;`;
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS availability TEXT;`;
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS strengths TEXT;`;
 }
 
 /**

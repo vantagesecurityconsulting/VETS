@@ -18,7 +18,7 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen bg-offwhite">
       {/* Top brand bar */}
-      <header className="bg-navy text-white">
+      <header className="bg-navy text-white print:hidden">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
           <Link href="/dashboard" className="flex items-center gap-3">
             <div className="h-9 w-1.5 rounded bg-military" />
@@ -45,7 +45,7 @@ export default async function DashboardLayout({
 
       {/* Navigation */}
       {!session.mustChangePin && (
-        <nav className="border-b border-black/5 bg-white">
+        <nav className="border-b border-black/5 bg-white print:hidden">
           <div className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-3 py-2">
             <NavLink href="/dashboard" exact>
               Home
@@ -75,7 +75,7 @@ export default async function DashboardLayout({
 
       <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
 
-      <footer className="border-t border-black/5 py-6 text-center text-xs text-charcoal/50">
+      <footer className="border-t border-black/5 py-6 text-center text-xs text-charcoal/50 print:hidden">
         VETS Canada — Dartmouth Food Bank · Proudly Supported by DriveX
         <span className="ml-2 text-charcoal/30">{APP_VERSION}</span>
       </footer>

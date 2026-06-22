@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -7,7 +8,11 @@ import {
   updateVolunteerAction,
   toggleVolunteerActiveAction,
   getVolunteerActivityAction,
+  getVolunteerLogAction,
+  addVolunteerLogAction,
+  deleteVolunteerLogAction,
   type ActivityRow,
+  type LogRow,
 } from "./actions";
 
 export interface UserRow {
@@ -16,6 +21,10 @@ export interface UserRow {
   role: "manager" | "volunteer";
   isActive: boolean;
   createdAt: string;
+  emergencyContact: string | null;
+  availability: string | null;
+  strengths: string | null;
+  totalHours: number;
 }
 
 export default function VolunteersManager({ users }: { users: UserRow[] }) {
@@ -26,6 +35,10 @@ export default function VolunteersManager({ users }: { users: UserRow[] }) {
   const [error, setError] = useState("");
   const [activityFor, setActivityFor] = useState<number | null>(null);
   const [activity, setActivity] = useState<ActivityRow[]>([]);
+  const [logFor, setLogFor] = useState<number | null>(null);
+  const [log, setLog] = useState<LogRow[]>([]);
+
+  const today = new Date().toISOString().slice(0, 10);
 
   const onAdd = async (fd: FormData) => {
     setError("");
@@ -54,9 +67,30 @@ export default function VolunteersManager({ users }: { users: UserRow[] }) {
 
   const loadActivity = async (id: number) => {
     if (activityFor === id) return setActivityFor(null);
-    const rows = await getVolunteerActivityAction(id);
-    setActivity(rows);
+    setLogFor(null);
+    setActivity(await getVolunteerActivityAction(id));
     setActivityFor(id);
+  };
+
+  const loadLog = async (id: number) => {
+    if (logFor === id) return setLogFor(null);
+    setActivityFor(null);
+    setLog(await getVolunteerLogAction(id));
+    setLogFor(id);
+  };
+
+  const addLog = async (fd: FormData) => {
+    setError("");
+    const res = await addVolunteerLogAction(fd);
+    if (!res.success) return setError(res.error || "Failed.");
+    setLog(await getVolunteerLogAction(Number(fd.get("volunteerId"))));
+    router.refresh();
+  };
+
+  const delLog = async (logId: number, volunteerId: number) => {
+    await deleteVolunteerLogAction(logId);
+    setLog(await getVolunteerLogAction(volunteerId));
+    router.refresh();
   };
 
   return (
@@ -75,30 +109,37 @@ export default function VolunteersManager({ users }: { users: UserRow[] }) {
       )}
 
       {showAdd && (
-        <form action={onAdd} className="card mt-4 grid gap-3 sm:grid-cols-3">
+        <form action={onAdd} className="card mt-4 grid gap-3 sm:grid-cols-2">
           <div>
             <label className="label">Name</label>
             <input name="name" className="input" required />
           </div>
-          <div>
-            <label className="label">4-digit PIN</label>
-            <input
-              name="pin"
-              inputMode="numeric"
-              pattern="\d{4}"
-              maxLength={4}
-              className="input text-center tracking-widest"
-              required
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">4-digit PIN</label>
+              <input name="pin" inputMode="numeric" pattern="\d{4}" maxLength={4} className="input text-center tracking-widest" required />
+            </div>
+            <div>
+              <label className="label">Role</label>
+              <select name="role" className="input" defaultValue="volunteer">
+                <option value="volunteer">Volunteer</option>
+                <option value="manager">Manager</option>
+              </select>
+            </div>
           </div>
           <div>
-            <label className="label">Role</label>
-            <select name="role" className="input" defaultValue="volunteer">
-              <option value="volunteer">Volunteer</option>
-              <option value="manager">Manager</option>
-            </select>
+            <label className="label">Emergency Contact</label>
+            <input name="emergencyContact" className="input" placeholder="Name & phone" />
           </div>
-          <div className="sm:col-span-3">
+          <div>
+            <label className="label">Availability</label>
+            <input name="availability" className="input" placeholder="e.g. Mon/Wed mornings" />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="label">Strengths / Skills</label>
+            <input name="strengths" className="input" placeholder="e.g. driving, heavy lifting, intake" />
+          </div>
+          <div className="sm:col-span-2">
             <button className="btn-primary w-full">Create Account</button>
           </div>
         </form>
@@ -108,37 +149,40 @@ export default function VolunteersManager({ users }: { users: UserRow[] }) {
         {users.map((u) => (
           <div key={u.id} className="card">
             {editId === u.id ? (
-              <form action={onEdit} className="grid gap-3 sm:grid-cols-3">
+              <form action={onEdit} className="grid gap-3 sm:grid-cols-2">
                 <input type="hidden" name="id" value={u.id} />
                 <div>
                   <label className="label">Name</label>
                   <input name="name" defaultValue={u.name} className="input" required />
                 </div>
-                <div>
-                  <label className="label">New PIN (blank = keep)</label>
-                  <input
-                    name="pin"
-                    inputMode="numeric"
-                    pattern="\d{4}"
-                    maxLength={4}
-                    className="input text-center tracking-widest"
-                    placeholder="••••"
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="label">New PIN (blank = keep)</label>
+                    <input name="pin" inputMode="numeric" pattern="\d{4}" maxLength={4} className="input text-center tracking-widest" placeholder="••••" />
+                  </div>
+                  <div>
+                    <label className="label">Role</label>
+                    <select name="role" className="input" defaultValue={u.role}>
+                      <option value="volunteer">Volunteer</option>
+                      <option value="manager">Manager</option>
+                    </select>
+                  </div>
                 </div>
                 <div>
-                  <label className="label">Role</label>
-                  <select name="role" className="input" defaultValue={u.role}>
-                    <option value="volunteer">Volunteer</option>
-                    <option value="manager">Manager</option>
-                  </select>
+                  <label className="label">Emergency Contact</label>
+                  <input name="emergencyContact" defaultValue={u.emergencyContact ?? ""} className="input" />
                 </div>
-                <div className="flex items-end gap-2 sm:col-span-3">
+                <div>
+                  <label className="label">Availability</label>
+                  <input name="availability" defaultValue={u.availability ?? ""} className="input" />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="label">Strengths / Skills</label>
+                  <input name="strengths" defaultValue={u.strengths ?? ""} className="input" />
+                </div>
+                <div className="flex items-end gap-2 sm:col-span-2">
                   <button className="btn-primary">Save</button>
-                  <button
-                    type="button"
-                    onClick={() => setEditId(null)}
-                    className="btn-outline"
-                  >
+                  <button type="button" onClick={() => setEditId(null)} className="btn-outline">
                     Cancel
                   </button>
                 </div>
@@ -158,14 +202,27 @@ export default function VolunteersManager({ users }: { users: UserRow[] }) {
                         </span>
                       )}
                     </p>
-                    <p className="text-xs text-charcoal/50">Added {u.createdAt}</p>
+                    <p className="text-xs text-charcoal/50">
+                      Added {u.createdAt} · {u.totalHours} hrs logged
+                    </p>
+                    <p className="mt-1 text-xs text-charcoal/60">
+                      {u.emergencyContact && <span>📞 {u.emergencyContact} </span>}
+                      {u.availability && <span>· 🗓 {u.availability} </span>}
+                      {u.strengths && <span>· 💪 {u.strengths}</span>}
+                    </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
+                    <Link href={`/dashboard/admin/volunteers/${u.id}/report`} className="btn-outline text-sm">
+                      PDF Report
+                    </Link>
+                    <button onClick={() => loadLog(u.id)} className="btn-outline text-sm">
+                      {logFor === u.id ? "Hide Hours" : "Hours / Notes"}
+                    </button>
                     <button onClick={() => loadActivity(u.id)} className="btn-outline text-sm">
                       {activityFor === u.id ? "Hide Activity" : "Activity"}
                     </button>
                     <button onClick={() => setEditId(u.id)} className="btn-outline text-sm">
-                      Edit / Reset PIN
+                      Edit
                     </button>
                     <button
                       onClick={() => toggle(u.id, !u.isActive)}
@@ -175,6 +232,49 @@ export default function VolunteersManager({ users }: { users: UserRow[] }) {
                     </button>
                   </div>
                 </div>
+
+                {logFor === u.id && (
+                  <div className="mt-3 border-t border-black/5 pt-3">
+                    <p className="mb-2 text-sm font-semibold text-navy">
+                      Hours &amp; activity notes ·{" "}
+                      <span className="text-charcoal/60">{u.totalHours} total hrs</span>
+                    </p>
+                    {log.length === 0 ? (
+                      <p className="text-sm text-charcoal/50">No entries yet.</p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {log.map((l) => (
+                          <div
+                            key={l.id}
+                            className="flex items-start justify-between gap-2 rounded-md bg-offwhite px-3 py-1.5 text-sm"
+                          >
+                            <span>
+                              <span className="font-medium">{l.date}</span>
+                              {l.hours > 0 && <span className="text-navy"> · {l.hours} hrs</span>}
+                              {l.note && <span className="block text-xs text-charcoal/60">{l.note}</span>}
+                            </span>
+                            <button
+                              onClick={() => delLog(l.id, u.id)}
+                              className="rounded px-2 py-0.5 text-xs font-semibold text-military"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <form action={addLog} className="mt-3 grid gap-2 sm:grid-cols-4">
+                      <input type="hidden" name="volunteerId" value={u.id} />
+                      <input name="date" type="date" defaultValue={today} className="input" />
+                      <input name="hours" type="number" min={0} step="0.25" placeholder="hrs" className="input" />
+                      <input name="note" placeholder="What they did…" className="input sm:col-span-2" />
+                      <div className="sm:col-span-4">
+                        <button className="btn-primary text-sm">+ Add Entry</button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+
                 {activityFor === u.id && (
                   <div className="mt-3 border-t border-black/5 pt-3">
                     {activity.length === 0 ? (
