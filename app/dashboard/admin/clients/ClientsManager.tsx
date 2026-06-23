@@ -24,6 +24,49 @@ export interface ClientRow {
   isActive: boolean;
   archiveReason: string | null;
   memberCount: number;
+  dateOfBirth: string | null;
+  gender: string | null;
+  address: string | null;
+  contact: string | null;
+  email: string | null;
+  serviceNumber: string | null;
+  notes: string | null;
+}
+
+/** Shared detail inputs for the head of household (used in add & edit forms). */
+function ClientDetailFields({ c }: { c?: ClientRow }) {
+  return (
+    <>
+      <div>
+        <label className="label">Date of Birth</label>
+        <input name="dob" type="date" defaultValue={c?.dateOfBirth ?? ""} className="input" />
+      </div>
+      <div>
+        <label className="label">Gender</label>
+        <input name="gender" defaultValue={c?.gender ?? ""} className="input" />
+      </div>
+      <div>
+        <label className="label">Contact Number</label>
+        <input name="contact" defaultValue={c?.contact ?? ""} className="input" />
+      </div>
+      <div>
+        <label className="label">Email</label>
+        <input name="email" type="email" defaultValue={c?.email ?? ""} className="input" />
+      </div>
+      <div>
+        <label className="label">Service Number</label>
+        <input name="serviceNumber" defaultValue={c?.serviceNumber ?? ""} className="input" />
+      </div>
+      <div>
+        <label className="label">Address</label>
+        <input name="address" defaultValue={c?.address ?? ""} className="input" />
+      </div>
+      <div className="sm:col-span-2">
+        <label className="label">Allergies / Important Notes</label>
+        <input name="notes" defaultValue={c?.notes ?? ""} className="input" />
+      </div>
+    </>
+  );
 }
 
 function defaultBudget(familySize: number) {
@@ -208,6 +251,7 @@ export default function ClientsManager({ clients }: { clients: ClientRow[] }) {
             <input name="name" className="input" required />
           </div>
           <BudgetFields initialSize={1} />
+          <ClientDetailFields />
           <div className="sm:col-span-2">
             <button className="btn-primary w-full">Save Client</button>
             <p className="mt-1 text-xs text-charcoal/50">
@@ -239,8 +283,9 @@ export default function ClientsManager({ clients }: { clients: ClientRow[] }) {
                   <input name="name" defaultValue={c.name} className="input" required />
                 </div>
                 <BudgetFields initialSize={c.familySize} initialBudget={c.pointBudget} />
-                <div className="flex items-end gap-2">
-                  <button className="btn-primary flex-1">Save</button>
+                <ClientDetailFields c={c} />
+                <div className="flex items-end gap-2 sm:col-span-2">
+                  <button className="btn-primary">Save</button>
                   <button type="button" onClick={() => setEditId(null)} className="btn-outline">
                     Cancel
                   </button>
@@ -255,6 +300,25 @@ export default function ClientsManager({ clients }: { clients: ClientRow[] }) {
                       {c.clientId} · Family of {c.familySize} · {c.pointBudget} credits
                       {c.memberCount > 0 && ` · ${c.memberCount} member${c.memberCount === 1 ? "" : "s"} on file`}
                     </p>
+                    {(c.contact || c.email || c.serviceNumber || c.dateOfBirth || c.gender) && (
+                      <p className="text-xs text-charcoal/50">
+                        {[
+                          c.dateOfBirth && `DOB ${c.dateOfBirth}`,
+                          c.gender,
+                          c.serviceNumber && `SN ${c.serviceNumber}`,
+                          c.contact,
+                          c.email,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    )}
+                    {c.address && (
+                      <p className="text-xs text-charcoal/50">{c.address}</p>
+                    )}
+                    {c.notes && (
+                      <p className="mt-0.5 text-xs font-semibold text-military">⚠ {c.notes}</p>
+                    )}
                     {!c.isActive && c.archiveReason && (
                       <p className="mt-1 text-xs italic text-charcoal/50">
                         Archived: {c.archiveReason}

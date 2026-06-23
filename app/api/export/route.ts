@@ -12,14 +12,16 @@ async function buildExport(type: string): Promise<Export | null> {
     case "clients": {
       const { rows } = await sql`
         SELECT c.client_id, c.name, c.family_size, c.point_budget,
+               c.date_of_birth, c.gender, c.contact, c.email, c.address,
+               c.service_number, c.notes,
                CASE WHEN c.is_active THEN 'active' ELSE 'archived' END AS status,
                c.archive_reason, c.created_at,
                (SELECT COUNT(*) FROM family_members fm WHERE fm.client_id = c.id) AS members
         FROM clients c ORDER BY c.name;
       `;
       return {
-        headers: ["Client ID", "Name", "Family Size", "Credits", "Status", "Archive Reason", "Created", "Members On File"],
-        rows: rows.map((r) => [r.client_id, r.name, r.family_size, r.point_budget, r.status, r.archive_reason, new Date(r.created_at).toISOString().slice(0, 10), r.members]),
+        headers: ["Client ID", "Name", "Family Size", "Credits", "Date of Birth", "Gender", "Contact", "Email", "Address", "Service Number", "Allergies / Notes", "Status", "Archive Reason", "Created", "Members On File"],
+        rows: rows.map((r) => [r.client_id, r.name, r.family_size, r.point_budget, r.date_of_birth ? String(r.date_of_birth) : "", r.gender, r.contact, r.email, r.address, r.service_number, r.notes, r.status, r.archive_reason, new Date(r.created_at).toISOString().slice(0, 10), r.members]),
       };
     }
     case "family_members": {

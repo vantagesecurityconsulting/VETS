@@ -10,6 +10,22 @@ export interface ActionResult {
   error?: string;
 }
 
+function detailFields(formData: FormData) {
+  const get = (k: string) => {
+    const v = String(formData.get(k) || "").trim();
+    return v === "" ? null : v;
+  };
+  return {
+    dob: get("dob"),
+    gender: get("gender"),
+    address: get("address"),
+    contact: get("contact"),
+    email: get("email"),
+    serviceNumber: get("serviceNumber"),
+    notes: get("notes"),
+  };
+}
+
 export async function createClientAction(
   formData: FormData
 ): Promise<ActionResult> {
@@ -20,6 +36,7 @@ export async function createClientAction(
   const budgetRaw = String(formData.get("pointBudget") || "").trim();
   const pointBudget =
     budgetRaw === "" ? defaultPointBudget(familySize) : Number(budgetRaw);
+  const d = detailFields(formData);
 
   if (!clientId || !name) {
     return { success: false, error: "Client ID and name are required." };
@@ -31,8 +48,14 @@ export async function createClientAction(
   }
 
   await sql`
-    INSERT INTO clients (client_id, name, family_size, point_budget, is_active)
-    VALUES (${clientId}, ${name}, ${familySize}, ${pointBudget}, true);
+    INSERT INTO clients
+      (client_id, name, family_size, point_budget, date_of_birth, gender,
+       address, contact, email, service_number, notes, is_active)
+    VALUES (
+      ${clientId}, ${name}, ${familySize}, ${pointBudget}, ${d.dob}::date,
+      ${d.gender}, ${d.address}, ${d.contact}, ${d.email}, ${d.serviceNumber},
+      ${d.notes}, true
+    );
   `;
   revalidatePath("/dashboard/admin/clients");
   return { success: true };
@@ -46,6 +69,7 @@ export async function updateClientAction(
   const name = String(formData.get("name") || "").trim();
   const familySize = Math.max(1, Number(formData.get("familySize")) || 1);
   const pointBudget = Number(formData.get("pointBudget"));
+  const d = detailFields(formData);
 
   if (!id || !name) {
     return { success: false, error: "Name is required." };
@@ -53,7 +77,10 @@ export async function updateClientAction(
 
   await sql`
     UPDATE clients
-    SET name = ${name}, family_size = ${familySize}, point_budget = ${pointBudget}
+    SET name = ${name}, family_size = ${familySize}, point_budget = ${pointBudget},
+        date_of_birth = ${d.dob}::date, gender = ${d.gender}, address = ${d.address},
+        contact = ${d.contact}, email = ${d.email}, service_number = ${d.serviceNumber},
+        notes = ${d.notes}
     WHERE id = ${id};
   `;
   revalidatePath("/dashboard/admin/clients");

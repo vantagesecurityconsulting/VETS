@@ -78,6 +78,13 @@ export async function createTables(): Promise<void> {
       name TEXT NOT NULL,
       family_size INTEGER NOT NULL DEFAULT 1,
       point_budget INTEGER NOT NULL,
+      date_of_birth DATE,
+      gender TEXT,
+      address TEXT,
+      contact TEXT,
+      email TEXT,
+      service_number TEXT,
+      notes TEXT,
       is_active BOOLEAN NOT NULL DEFAULT true,
       archive_reason TEXT,
       archived_at TIMESTAMPTZ,
@@ -277,6 +284,14 @@ export async function runMigrations(): Promise<void> {
   // Client archive fields.
   await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS archive_reason TEXT;`;
   await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;`;
+  // Primary client (head of household) detail fields.
+  await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS date_of_birth DATE;`;
+  await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS gender TEXT;`;
+  await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS address TEXT;`;
+  await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS contact TEXT;`;
+  await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS email TEXT;`;
+  await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS service_number TEXT;`;
+  await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS notes TEXT;`;
   // Family member extra fields.
   await sql`ALTER TABLE family_members ADD COLUMN IF NOT EXISTS email TEXT;`;
   await sql`ALTER TABLE family_members ADD COLUMN IF NOT EXISTS notes TEXT;`;
