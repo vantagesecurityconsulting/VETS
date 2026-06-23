@@ -1,7 +1,7 @@
 "use server";
 
 import { sql } from "@/lib/db";
-import { requireManager } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 export interface ActionResult {
@@ -12,7 +12,7 @@ export interface ActionResult {
 export async function updateInventoryAction(
   formData: FormData
 ): Promise<ActionResult> {
-  await requireManager();
+  await requirePermission("inventory");
   const itemId = Number(formData.get("itemId"));
   const quantity = Math.max(0, Number(formData.get("quantity")) || 0);
   const expiryRaw = String(formData.get("expiry") || "").trim();

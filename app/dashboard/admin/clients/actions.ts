@@ -1,7 +1,7 @@
 "use server";
 
 import { sql } from "@/lib/db";
-import { requireManager } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 import { defaultPointBudget } from "@/lib/points";
 import { revalidatePath } from "next/cache";
 
@@ -29,7 +29,7 @@ function detailFields(formData: FormData) {
 export async function createClientAction(
   formData: FormData
 ): Promise<ActionResult> {
-  await requireManager();
+  await requirePermission("clients");
   const clientId = String(formData.get("clientId") || "").trim();
   const name = String(formData.get("name") || "").trim();
   const familySize = Math.max(1, Number(formData.get("familySize")) || 1);
@@ -64,7 +64,7 @@ export async function createClientAction(
 export async function updateClientAction(
   formData: FormData
 ): Promise<ActionResult> {
-  await requireManager();
+  await requirePermission("clients");
   const id = Number(formData.get("id"));
   const name = String(formData.get("name") || "").trim();
   const familySize = Math.max(1, Number(formData.get("familySize")) || 1);
@@ -91,7 +91,7 @@ export async function archiveClientAction(
   id: number,
   reason: string
 ): Promise<ActionResult> {
-  await requireManager();
+  await requirePermission("clients");
   await sql`
     UPDATE clients
     SET is_active = false, archive_reason = ${reason || null}, archived_at = now()
@@ -102,7 +102,7 @@ export async function archiveClientAction(
 }
 
 export async function reactivateClientAction(id: number): Promise<ActionResult> {
-  await requireManager();
+  await requirePermission("clients");
   await sql`
     UPDATE clients
     SET is_active = true, archive_reason = NULL, archived_at = NULL
@@ -129,7 +129,7 @@ export interface FamilyMember {
 export async function getFamilyMembersAction(
   clientId: number
 ): Promise<FamilyMember[]> {
-  await requireManager();
+  await requirePermission("clients");
   const { rows } = await sql`
     SELECT id, name, date_of_birth, gender, address, contact, email, service_number, notes
     FROM family_members WHERE client_id = ${clientId} ORDER BY id;
@@ -150,7 +150,7 @@ export async function getFamilyMembersAction(
 export async function addFamilyMemberAction(
   formData: FormData
 ): Promise<ActionResult> {
-  await requireManager();
+  await requirePermission("clients");
   const clientId = Number(formData.get("clientId"));
   if (!clientId) return { success: false, error: "Missing client." };
   const get = (k: string) => {
@@ -173,7 +173,7 @@ export async function addFamilyMemberAction(
 export async function deleteFamilyMemberAction(
   id: number
 ): Promise<ActionResult> {
-  await requireManager();
+  await requirePermission("clients");
   await sql`DELETE FROM family_members WHERE id = ${id};`;
   revalidatePath("/dashboard/admin/clients");
   return { success: true };
@@ -190,7 +190,7 @@ export interface VisitHistoryRow {
 export async function getClientHistoryAction(
   clientId: number
 ): Promise<VisitHistoryRow[]> {
-  await requireManager();
+  await requirePermission("clients");
   const { rows } = await sql`
     SELECT
       t.id AS transaction_id,

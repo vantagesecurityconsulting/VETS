@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
-import { getSession } from "@/lib/auth";
+import { getSession, getCurrentPermissions } from "@/lib/auth";
 import { toCsv } from "@/lib/csv";
 
 export const dynamic = "force-dynamic";
@@ -113,7 +113,8 @@ async function buildExport(type: string): Promise<Export | null> {
 
 export async function GET(req: NextRequest) {
   const session = await getSession();
-  if (!session || session.role !== "manager") {
+  const perms = await getCurrentPermissions();
+  if (!session || !perms.includes("export")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const type = req.nextUrl.searchParams.get("type") || "";

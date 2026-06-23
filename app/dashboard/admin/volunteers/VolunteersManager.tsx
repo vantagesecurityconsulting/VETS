@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { PERMISSIONS } from "@/lib/permissions";
 import {
   createVolunteerAction,
   updateVolunteerAction,
@@ -25,6 +26,33 @@ export interface UserRow {
   availability: string | null;
   strengths: string | null;
   totalHours: number;
+  permissions: string[];
+}
+
+function PermissionChecklist({ selected }: { selected?: string[] }) {
+  return (
+    <div className="sm:col-span-2">
+      <label className="label">Extra access (managers have all of these)</label>
+      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+        {PERMISSIONS.map((p) => (
+          <label key={p.key} className="flex items-center gap-2 rounded-md bg-offwhite px-2 py-1.5 text-sm">
+            <input
+              type="checkbox"
+              name="permissions"
+              value={p.key}
+              defaultChecked={selected?.includes(p.key)}
+              className="h-4 w-4"
+            />
+            <span title={p.desc}>{p.label}</span>
+          </label>
+        ))}
+      </div>
+      <p className="mt-1 text-xs text-charcoal/50">
+        Grant a volunteer access to specific manager areas without making them a
+        full manager. (Volunteer account management stays manager-only.)
+      </p>
+    </div>
+  );
 }
 
 export default function VolunteersManager({ users }: { users: UserRow[] }) {
@@ -139,6 +167,7 @@ export default function VolunteersManager({ users }: { users: UserRow[] }) {
             <label className="label">Strengths / Skills</label>
             <input name="strengths" className="input" placeholder="e.g. driving, heavy lifting, intake" />
           </div>
+          <PermissionChecklist />
           <div className="sm:col-span-2">
             <button className="btn-primary w-full">Create Account</button>
           </div>
@@ -180,6 +209,7 @@ export default function VolunteersManager({ users }: { users: UserRow[] }) {
                   <label className="label">Strengths / Skills</label>
                   <input name="strengths" defaultValue={u.strengths ?? ""} className="input" />
                 </div>
+                <PermissionChecklist selected={u.permissions} />
                 <div className="flex items-end gap-2 sm:col-span-2">
                   <button className="btn-primary">Save</button>
                   <button type="button" onClick={() => setEditId(null)} className="btn-outline">
@@ -210,6 +240,17 @@ export default function VolunteersManager({ users }: { users: UserRow[] }) {
                       {u.availability && <span>· 🗓 {u.availability} </span>}
                       {u.strengths && <span>· 💪 {u.strengths}</span>}
                     </p>
+                    {u.role === "manager" ? (
+                      <p className="mt-1 text-xs font-semibold text-gold">
+                        🔑 Full access (manager)
+                      </p>
+                    ) : (
+                      u.permissions.length > 0 && (
+                        <p className="mt-1 text-xs font-semibold text-navy">
+                          🔑 Extra access: {u.permissions.join(", ")}
+                        </p>
+                      )
+                    )}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Link href={`/dashboard/admin/volunteers/${u.id}/report`} className="btn-outline text-sm">

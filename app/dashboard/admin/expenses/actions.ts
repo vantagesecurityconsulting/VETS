@@ -1,7 +1,7 @@
 "use server";
 
 import { sql } from "@/lib/db";
-import { requireManager } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 export interface ActionResult {
@@ -14,7 +14,7 @@ const PATH = "/dashboard/admin/expenses";
 export async function addExpenseAction(
   formData: FormData
 ): Promise<ActionResult> {
-  const session = await requireManager();
+  const session = await requirePermission("expenses");
   const date = String(formData.get("date") || "").trim();
   const category = String(formData.get("category") || "").trim();
   const description = String(formData.get("description") || "").trim();
@@ -40,7 +40,7 @@ export async function addExpenseAction(
 }
 
 export async function deleteExpenseAction(id: number): Promise<ActionResult> {
-  await requireManager();
+  await requirePermission("expenses");
   await sql`DELETE FROM expenses WHERE id = ${id};`;
   revalidatePath(PATH);
   return { success: true };

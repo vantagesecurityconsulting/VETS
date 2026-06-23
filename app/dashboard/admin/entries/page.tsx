@@ -1,11 +1,11 @@
-import { requireManager } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import EntriesManager, { type EntryRow } from "./EntriesManager";
 
 export const dynamic = "force-dynamic";
 
 export default async function EntriesPage() {
-  await requireManager();
+  await requirePermission("entries");
 
   const { rows } = await sql`
     SELECT

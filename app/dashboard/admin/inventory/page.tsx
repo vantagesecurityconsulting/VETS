@@ -1,11 +1,11 @@
-import { requireManager } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import InventoryManager, { type InvRow } from "./InventoryManager";
 
 export const dynamic = "force-dynamic";
 
 export default async function InventoryPage() {
-  await requireManager();
+  await requirePermission("inventory");
   const { rows } = await sql`
     SELECT
       i.id AS item_id,

@@ -1,11 +1,11 @@
-import { requireManager } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import ClientsManager, { type ClientRow } from "./ClientsManager";
 
 export const dynamic = "force-dynamic";
 
 export default async function ClientsPage() {
-  await requireManager();
+  await requirePermission("clients");
   const { rows } = await sql`
     SELECT c.id, c.client_id, c.name, c.family_size, c.point_budget, c.is_active,
            c.archive_reason, c.date_of_birth, c.gender, c.address, c.contact,

@@ -1,9 +1,12 @@
 import "server-only";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
 import { getSessionSecret } from "./env";
+import { sql } from "./db";
+import { parsePermissions, PERMISSION_KEYS } from "./permissions";
 
 const COOKIE_NAME = "vets_session";
 const SESSION_DURATION_SECONDS = 60 * 60 * 12; // 12 hours
@@ -99,9 +102,38 @@ export async function requireAuth(opts?: {
 
 /**
  * Require a manager. Redirects volunteers back to their dashboard.
+ * Use for truly manager-only things (e.g. managing accounts/permissions).
  */
 export async function requireManager(): Promise<SessionPayload> {
   const session = await requireAuth();
   if (session.role !== "manager") redirect("/dashboard");
+  return session;
+}
+
+/**
+ * Effective permission keys for the current user. Managers get all of them.
+ * Cached per request to avoid repeat lookups.
+ */
+export const getCurrentPermissions = cache(async (): Promise<string[]> => {
+  const session = await getSession();
+  if (!session) return [];
+  if (session.role === "manager") return PERMISSION_KEYS;
+  const { rows } = await sql`SELECT permissions FROM users WHERE id = ${session.userId};`;
+  return parsePermissions(rows[0]?.permissions);
+});
+
+/** Require a specific granted permission (managers always pass). */
+export async function requirePermission(key: string): Promise<SessionPayload> {
+  const session = await requireAuth();
+  const perms = await getCurrentPermissions();
+  if (!perms.includes(key)) redirect("/dashboard");
+  return session;
+}
+
+/** Require manager OR any granted permission (for the admin landing). */
+export async function requireAnyAdmin(): Promise<SessionPayload> {
+  const session = await requireAuth();
+  const perms = await getCurrentPermissions();
+  if (perms.length === 0) redirect("/dashboard");
   return session;
 }

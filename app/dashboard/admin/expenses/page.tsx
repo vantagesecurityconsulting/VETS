@@ -1,11 +1,11 @@
-import { requireManager } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import ExpensesManager, { type ExpenseRow } from "./ExpensesManager";
 
 export const dynamic = "force-dynamic";
 
 export default async function ExpensesPage() {
-  await requireManager();
+  await requirePermission("expenses");
 
   const { rows } = await sql`
     SELECT e.id, e.expense_date, e.category, e.description, e.vendor, e.amount,

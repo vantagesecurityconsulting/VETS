@@ -1,4 +1,4 @@
-import { requireManager } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 import {
   resolveRange,
   type RangeKey,
@@ -90,7 +90,7 @@ export default async function ReportsPage({
 }: {
   searchParams: { report?: string; range?: string; from?: string; to?: string };
 }) {
-  await requireManager();
+  await requirePermission("reports");
 
   const report = searchParams.report || "visits";
   const rangeKey = (searchParams.range || "week") as RangeKey;

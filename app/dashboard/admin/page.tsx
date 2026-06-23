@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireManager } from "@/lib/auth";
+import { requireAnyAdmin, getCurrentPermissions } from "@/lib/auth";
 import {
   getOverviewStats,
   getExpiringItems,
@@ -15,14 +15,14 @@ import ExpiryAlert from "@/components/ExpiryAlert";
 export const dynamic = "force-dynamic";
 
 const adminLinks = [
-  { href: "/dashboard/admin/clients", title: "Clients", desc: "Manage client records & visit history" },
-  { href: "/dashboard/admin/inventory", title: "Inventory", desc: "Stock levels & expiry tracking" },
-  { href: "/dashboard/admin/items", title: "Items & Categories", desc: "Manage catalog & point values" },
-  { href: "/dashboard/admin/volunteers", title: "Volunteers", desc: "Manage accounts & PINs" },
-  { href: "/dashboard/admin/expenses", title: "Expenses", desc: "Track money spent & where it goes" },
-  { href: "/dashboard/admin/entries", title: "Entries & Corrections", desc: "Fix entries made in error" },
-  { href: "/dashboard/admin/export", title: "Data Export & Backups", desc: "Download CSVs for Excel / Airtable / backups" },
-  { href: "/dashboard/admin/reports", title: "Reports", desc: "Full reporting suite" },
+  { href: "/dashboard/admin/clients", title: "Clients", desc: "Manage client records & visit history", perm: "clients" },
+  { href: "/dashboard/admin/inventory", title: "Inventory", desc: "Stock levels & expiry tracking", perm: "inventory" },
+  { href: "/dashboard/admin/items", title: "Items & Categories", desc: "Manage catalog & point values", perm: "items" },
+  { href: "/dashboard/admin/volunteers", title: "Volunteers", desc: "Manage accounts & PINs", perm: "manager" },
+  { href: "/dashboard/admin/expenses", title: "Expenses", desc: "Track money spent & where it goes", perm: "expenses" },
+  { href: "/dashboard/admin/entries", title: "Entries & Corrections", desc: "Fix entries made in error", perm: "entries" },
+  { href: "/dashboard/admin/export", title: "Data Export & Backups", desc: "Download CSVs for Excel / Airtable / backups", perm: "export" },
+  { href: "/dashboard/admin/reports", title: "Reports", desc: "Full reporting suite", perm: "reports" },
 ];
 
 function StatCard({
@@ -48,7 +48,12 @@ const money = (n: number) =>
 const number = (n: number) => n.toLocaleString("en-CA");
 
 export default async function AdminHome() {
-  await requireManager();
+  const session = await requireAnyAdmin();
+  const perms = await getCurrentPermissions();
+  const isManager = session.role === "manager";
+  const visibleLinks = adminLinks.filter((l) =>
+    l.perm === "manager" ? isManager : perms.includes(l.perm)
+  );
   const [stats, expiring, lifetime, credits, inactive] = await Promise.all([
     getOverviewStats(),
     getExpiringItems(DEFAULT_EXPIRY_THRESHOLD_DAYS),
@@ -160,7 +165,7 @@ export default async function AdminHome() {
             Quick Links
           </h2>
           <div className="grid gap-3 sm:grid-cols-2">
-            {adminLinks.map((l) => (
+            {visibleLinks.map((l) => (
               <Link
                 key={l.href}
                 href={l.href}

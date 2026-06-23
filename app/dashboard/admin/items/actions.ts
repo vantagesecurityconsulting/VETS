@@ -1,7 +1,7 @@
 "use server";
 
 import { sql } from "@/lib/db";
-import { requireManager } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 import { resetCatalog, recomputeItemPrice } from "@/lib/init";
 import { revalidatePath } from "next/cache";
 
@@ -17,7 +17,7 @@ const PATH = "/dashboard/admin/items";
  * food-bank basics. Manager only. Does not affect users or clients.
  */
 export async function resetCatalogAction(): Promise<ActionResult> {
-  await requireManager();
+  await requirePermission("items");
   await resetCatalog();
   revalidatePath(PATH);
   revalidatePath("/dashboard/admin/inventory");
@@ -27,7 +27,7 @@ export async function resetCatalogAction(): Promise<ActionResult> {
 export async function createCategoryAction(
   formData: FormData
 ): Promise<ActionResult> {
-  await requireManager();
+  await requirePermission("items");
   const name = String(formData.get("name") || "").trim();
   const pointValue = Math.max(0, Number(formData.get("pointValue")) || 0);
   if (!name) return { success: false, error: "Category name is required." };
@@ -44,7 +44,7 @@ export async function createCategoryAction(
 export async function updateCategoryAction(
   formData: FormData
 ): Promise<ActionResult> {
-  await requireManager();
+  await requirePermission("items");
   const id = Number(formData.get("id"));
   const name = String(formData.get("name") || "").trim();
   const pointValue = Math.max(0, Number(formData.get("pointValue")) || 0);
@@ -57,7 +57,7 @@ export async function updateCategoryAction(
 export async function createItemAction(
   formData: FormData
 ): Promise<ActionResult> {
-  await requireManager();
+  await requirePermission("items");
   const categoryId = Number(formData.get("categoryId"));
   const name = String(formData.get("name") || "").trim();
   const unitPrice = Math.max(0, Number(formData.get("unitPrice")) || 0);
@@ -80,7 +80,7 @@ export async function createItemAction(
 export async function updateItemAction(
   formData: FormData
 ): Promise<ActionResult> {
-  await requireManager();
+  await requirePermission("items");
   const id = Number(formData.get("id"));
   const name = String(formData.get("name") || "").trim();
   const unitPrice = Math.max(0, Number(formData.get("unitPrice")) || 0);
@@ -96,7 +96,7 @@ export async function addItemPriceAction(
   store: string,
   price: number
 ): Promise<ActionResult> {
-  await requireManager();
+  await requirePermission("items");
   const s = store.trim();
   if (!itemId || !s) return { success: false, error: "Store name is required." };
   await sql`
@@ -112,7 +112,7 @@ export async function addItemPriceAction(
 export async function deleteItemPriceAction(
   priceId: number
 ): Promise<ActionResult> {
-  await requireManager();
+  await requirePermission("items");
   const { rows } = await sql`
     DELETE FROM item_prices WHERE id = ${priceId} RETURNING item_id;
   `;
@@ -126,7 +126,7 @@ export async function toggleItemActiveAction(
   id: number,
   isActive: boolean
 ): Promise<ActionResult> {
-  await requireManager();
+  await requirePermission("items");
   await sql`UPDATE items SET is_active = ${isActive} WHERE id = ${id};`;
   revalidatePath(PATH);
   return { success: true };
@@ -137,7 +137,7 @@ export async function moveCategoryAction(
   id: number,
   direction: -1 | 1
 ): Promise<ActionResult> {
-  await requireManager();
+  await requirePermission("items");
   const { rows } = await sql`SELECT id, display_order FROM categories ORDER BY display_order, name;`;
   const idx = rows.findIndex((r) => r.id === id);
   const swapIdx = idx + direction;
@@ -156,7 +156,7 @@ export async function moveItemAction(
   categoryId: number,
   direction: -1 | 1
 ): Promise<ActionResult> {
-  await requireManager();
+  await requirePermission("items");
   const { rows } = await sql`
     SELECT id, display_order FROM items WHERE category_id = ${categoryId} ORDER BY display_order, name;
   `;

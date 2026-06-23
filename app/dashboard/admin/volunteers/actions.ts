@@ -2,7 +2,16 @@
 
 import { sql } from "@/lib/db";
 import { requireManager, hashPin, isValidPinFormat, verifyPin } from "@/lib/auth";
+import { PERMISSION_KEYS } from "@/lib/permissions";
 import { revalidatePath } from "next/cache";
+
+function permissionsJson(formData: FormData): string {
+  const selected = formData
+    .getAll("permissions")
+    .map((p) => String(p))
+    .filter((p) => PERMISSION_KEYS.includes(p));
+  return JSON.stringify(Array.from(new Set(selected)));
+}
 
 export interface ActionResult {
   success: boolean;
@@ -37,10 +46,10 @@ export async function createVolunteerAction(
   const hashed = await hashPin(pin);
   await sql`
     INSERT INTO users
-      (name, pin, role, must_change_pin, is_active, emergency_contact, availability, strengths)
+      (name, pin, role, must_change_pin, is_active, emergency_contact, availability, strengths, permissions)
     VALUES (
       ${name}, ${hashed}, ${role === "manager" ? "manager" : "volunteer"}, false, true,
-      ${get("emergencyContact")}, ${get("availability")}, ${get("strengths")}
+      ${get("emergencyContact")}, ${get("availability")}, ${get("strengths")}, ${permissionsJson(formData)}
     );
   `;
   revalidatePath("/dashboard/admin/volunteers");
@@ -68,7 +77,8 @@ export async function updateVolunteerAction(
         role = ${role === "manager" ? "manager" : "volunteer"},
         emergency_contact = ${get("emergencyContact")},
         availability = ${get("availability")},
-        strengths = ${get("strengths")}
+        strengths = ${get("strengths")},
+        permissions = ${permissionsJson(formData)}
     WHERE id = ${id};
   `;
 

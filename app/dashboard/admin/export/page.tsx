@@ -1,4 +1,4 @@
-import { requireManager } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +13,7 @@ const EXPORTS = [
 ];
 
 export default async function ExportPage() {
-  await requireManager();
+  await requirePermission("export");
 
   return (
     <div>

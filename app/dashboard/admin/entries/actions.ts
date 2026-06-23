@@ -1,7 +1,7 @@
 "use server";
 
 import { sql } from "@/lib/db";
-import { requireManager } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 export interface ActionResult {
@@ -19,7 +19,7 @@ export interface ActionResult {
 export async function deleteEntryAction(
   transactionId: number
 ): Promise<ActionResult> {
-  await requireManager();
+  await requirePermission("entries");
 
   const { rows: txn } = await sql`SELECT type FROM transactions WHERE id = ${transactionId};`;
   if (txn.length === 0) return { success: false, error: "Entry not found." };

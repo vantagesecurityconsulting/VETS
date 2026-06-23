@@ -1,11 +1,11 @@
-import { requireManager } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import ItemsManager, { type AdminCategory } from "./ItemsManager";
 
 export const dynamic = "force-dynamic";
 
 export default async function ItemsPage() {
-  await requireManager();
+  await requirePermission("items");
   const { rows } = await sql`
     SELECT
       c.id AS category_id,

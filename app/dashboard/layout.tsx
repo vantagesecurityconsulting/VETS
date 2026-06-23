@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, getCurrentPermissions } from "@/lib/auth";
 import LogoutButton from "@/components/LogoutButton";
 import NavLink from "@/components/NavLink";
 import { APP_VERSION } from "@/lib/version";
@@ -19,6 +19,9 @@ export default async function DashboardLayout({
   // Allow access even when a PIN change is pending so the change-pin page works.
   const session = await requireAuth({ allowMustChangePin: true });
   const isManager = session.role === "manager";
+  const perms = await getCurrentPermissions();
+  const can = (key: string) => perms.includes(key);
+  const hasAnyAdmin = perms.length > 0;
 
   return (
     <div className="min-h-screen bg-offwhite">
@@ -60,20 +63,20 @@ export default async function DashboardLayout({
             <NavLink href="/dashboard/count">Stock Count</NavLink>
             <NavLink href="/dashboard/waste">Write-Off</NavLink>
             <NavLink href="/dashboard/schedule">Schedule</NavLink>
-            {isManager && (
+            {hasAnyAdmin && (
               <>
                 <span className="mx-1 self-center text-black/20">|</span>
                 <NavLink href="/dashboard/admin" exact>
                   Admin
                 </NavLink>
-                <NavLink href="/dashboard/admin/clients">Clients</NavLink>
-                <NavLink href="/dashboard/admin/inventory">Inventory</NavLink>
-                <NavLink href="/dashboard/admin/items">Items</NavLink>
-                <NavLink href="/dashboard/admin/volunteers">Volunteers</NavLink>
-                <NavLink href="/dashboard/admin/expenses">Expenses</NavLink>
-                <NavLink href="/dashboard/admin/entries">Corrections</NavLink>
-                <NavLink href="/dashboard/admin/export">Export</NavLink>
-                <NavLink href="/dashboard/admin/reports">Reports</NavLink>
+                {can("clients") && <NavLink href="/dashboard/admin/clients">Clients</NavLink>}
+                {can("inventory") && <NavLink href="/dashboard/admin/inventory">Inventory</NavLink>}
+                {can("items") && <NavLink href="/dashboard/admin/items">Items</NavLink>}
+                {isManager && <NavLink href="/dashboard/admin/volunteers">Volunteers</NavLink>}
+                {can("expenses") && <NavLink href="/dashboard/admin/expenses">Expenses</NavLink>}
+                {can("entries") && <NavLink href="/dashboard/admin/entries">Corrections</NavLink>}
+                {can("export") && <NavLink href="/dashboard/admin/export">Export</NavLink>}
+                {can("reports") && <NavLink href="/dashboard/admin/reports">Reports</NavLink>}
               </>
             )}
           </div>

@@ -19,6 +19,7 @@ export async function createTables(): Promise<void> {
       emergency_contact TEXT,
       availability TEXT,
       strengths TEXT,
+      permissions TEXT NOT NULL DEFAULT '[]',
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `;
@@ -299,6 +300,7 @@ export async function runMigrations(): Promise<void> {
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS emergency_contact TEXT;`;
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS availability TEXT;`;
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS strengths TEXT;`;
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions TEXT NOT NULL DEFAULT '[]';`;
 }
 
 /**
