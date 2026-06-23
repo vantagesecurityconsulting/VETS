@@ -21,6 +21,7 @@ const adminLinks = [
   { href: "/dashboard/admin/volunteers", title: "Volunteers", desc: "Manage accounts & PINs" },
   { href: "/dashboard/admin/expenses", title: "Expenses", desc: "Track money spent & where it goes" },
   { href: "/dashboard/admin/entries", title: "Entries & Corrections", desc: "Fix entries made in error" },
+  { href: "/dashboard/admin/export", title: "Data Export & Backups", desc: "Download CSVs for Excel / Airtable / backups" },
   { href: "/dashboard/admin/reports", title: "Reports", desc: "Full reporting suite" },
 ];
 
