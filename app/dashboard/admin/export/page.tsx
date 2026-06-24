@@ -8,6 +8,7 @@ const EXPORTS = [
   { type: "inventory", title: "Inventory", desc: "Current stock with prices, weights, values, expiry" },
   { type: "transactions", title: "Transactions", desc: "Every visit, donation, count & write-off" },
   { type: "donors", title: "Donors", desc: "Donor registry with totals donated" },
+  { type: "cash_donations", title: "Cash & Gift Donations", desc: "Cash, e-transfer & gift card donations" },
   { type: "expenses", title: "Expenses", desc: "Recorded spending by date and category" },
   { type: "appointments", title: "Appointments", desc: "Booked shopping appointments" },
   { type: "volunteer_hours", title: "Volunteer Hours", desc: "Logged hours & activity notes" },

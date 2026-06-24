@@ -190,6 +190,20 @@ export async function createTables(): Promise<void> {
     );
   `;
   await sql`
+    CREATE TABLE IF NOT EXISTS cash_donations (
+      id SERIAL PRIMARY KEY,
+      donor_id INTEGER REFERENCES donors(id) ON DELETE SET NULL,
+      donor_name TEXT,
+      method TEXT NOT NULL DEFAULT 'Cash',
+      amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+      gift_card_store TEXT,
+      donation_date DATE NOT NULL DEFAULT CURRENT_DATE,
+      notes TEXT,
+      recorded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `;
+  await sql`
     CREATE TABLE IF NOT EXISTS shifts (
       id SERIAL PRIMARY KEY,
       user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -223,6 +237,8 @@ export async function createTables(): Promise<void> {
   await sql`CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(expense_date);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(appt_date);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_shifts_date ON shifts(shift_date);`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_cash_donations_date ON cash_donations(donation_date);`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_cash_donations_donor ON cash_donations(donor_id);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);`;
 }

@@ -98,9 +98,14 @@ export default function DonorsManager({ donors }: { donors: DonorRow[] }) {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-heading text-2xl font-bold text-navy">Donors</h1>
-        <button onClick={() => setShowAdd((s) => !s)} className="btn-primary">
-          {showAdd ? "Cancel" : "+ Add Donor"}
-        </button>
+        <div className="flex gap-2">
+          <Link href="/dashboard/admin/donors/cash" className="btn-outline">
+            💵 Cash &amp; Gift Cards
+          </Link>
+          <button onClick={() => setShowAdd((s) => !s)} className="btn-primary">
+            {showAdd ? "Cancel" : "+ Add Donor"}
+          </button>
+        </div>
       </div>
 
       {error && (

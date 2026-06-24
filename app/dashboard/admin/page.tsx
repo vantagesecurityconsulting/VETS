@@ -21,6 +21,7 @@ const adminLinks = [
   { href: "/dashboard/admin/volunteers", title: "Volunteers", desc: "Manage accounts & PINs", perm: "manager" },
   { href: "/dashboard/admin/orders", title: "Delivery Orders", desc: "Client orders to shop & deliver", perm: "orders" },
   { href: "/dashboard/admin/donors", title: "Donors", desc: "Donor registry & printable reports", perm: "donors" },
+  { href: "/dashboard/admin/donors/cash", title: "Cash & Gift Cards", desc: "Log cash, e-transfer & gift card donations", perm: "donors" },
   { href: "/dashboard/admin/expenses", title: "Expenses", desc: "Track money spent & where it goes", perm: "expenses" },
   { href: "/dashboard/admin/entries", title: "Entries & Corrections", desc: "Fix entries made in error", perm: "entries" },
   { href: "/dashboard/admin/export", title: "Data Export & Backups", desc: "Download CSVs for Excel / Airtable / backups", perm: "export" },

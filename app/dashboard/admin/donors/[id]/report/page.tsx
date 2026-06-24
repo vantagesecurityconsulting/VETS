@@ -54,6 +54,15 @@ export default async function DonorReportPage({
     { qty: 0, value: 0, weight: 0 }
   );
 
+  // Monetary donations (cash / e-transfer / gift cards) in the period.
+  const { rows: cashRows } = await sql`
+    SELECT donation_date, method, amount, gift_card_store
+    FROM cash_donations
+    WHERE donor_id = ${id} AND donation_date BETWEEN ${from || "1900-01-01"} AND ${to || "2999-01-01"}
+    ORDER BY donation_date DESC;
+  `;
+  const cashTotal = cashRows.reduce((a, r) => a + Number(r.amount), 0);
+
   const { rows: dateRows } = await sql`
     SELECT created_at, COUNT(*)::int AS lines FROM (
       SELECT t.created_at FROM transactions t WHERE t.type='stock_in' AND t.donor_id=${id}
@@ -134,6 +143,34 @@ export default async function DonorReportPage({
       <p className="mt-3 text-sm text-charcoal/60">
         {dateRows.length} donation drop-off{dateRows.length === 1 ? "" : "s"} in this period.
       </p>
+
+      {cashRows.length > 0 && (
+        <>
+          <h3 className="mt-6 font-heading text-lg font-bold text-navy">
+            Monetary Donations — {money(cashTotal)}
+          </h3>
+          <table className="mt-2 w-full text-sm">
+            <thead>
+              <tr className="border-b border-black/20 text-left">
+                <th className="py-1">Date</th>
+                <th className="py-1">Type</th>
+                <th className="py-1">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cashRows.map((r, i) => (
+                <tr key={i} className="border-b border-black/5">
+                  <td className="py-1.5">{new Date(r.donation_date).toLocaleDateString()}</td>
+                  <td className="py-1.5">
+                    {r.method}{r.gift_card_store ? ` (${r.gift_card_store})` : ""}
+                  </td>
+                  <td className="py-1.5">{money(Number(r.amount))}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
 
       <p className="mt-8 text-center text-xs text-charcoal/40">
         Thank you for supporting our veterans. · VETS Canada — Dartmouth Food Bank

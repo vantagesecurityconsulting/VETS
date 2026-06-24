@@ -91,6 +91,20 @@ async function buildExport(type: string): Promise<Export | null> {
         rows: rows.map((r) => [r.name, r.contact, r.email, r.address, r.notes, r.status, r.items, Number(r.value).toFixed(2), Number(r.weight)]),
       };
     }
+    case "cash_donations": {
+      const { rows } = await sql`
+        SELECT cd.donation_date, cd.method, cd.amount, cd.gift_card_store,
+               COALESCE(d.name, cd.donor_name) AS donor, cd.notes, u.name AS recorded_by
+        FROM cash_donations cd
+        LEFT JOIN donors d ON d.id = cd.donor_id
+        LEFT JOIN users u ON u.id = cd.recorded_by
+        ORDER BY cd.donation_date DESC;
+      `;
+      return {
+        headers: ["Date", "Type", "Amount", "Gift Card Store", "Donor", "Notes", "Recorded By"],
+        rows: rows.map((r) => [String(r.donation_date), r.method, Number(r.amount).toFixed(2), r.gift_card_store, r.donor || "Anonymous", r.notes, r.recorded_by]),
+      };
+    }
     case "expenses": {
       const { rows } = await sql`
         SELECT e.expense_date, e.category, e.description, e.vendor, e.amount, u.name AS entered_by
