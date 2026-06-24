@@ -7,6 +7,7 @@ import {
   updateClientAction,
   archiveClientAction,
   reactivateClientAction,
+  deleteClientAction,
   getClientHistoryAction,
   getFamilyMembersAction,
   addFamilyMemberAction,
@@ -31,6 +32,7 @@ export interface ClientRow {
   email: string | null;
   serviceNumber: string | null;
   notes: string | null;
+  deliveryApproved: boolean;
 }
 
 /** Shared detail inputs for the head of household (used in add & edit forms). */
@@ -64,6 +66,23 @@ function ClientDetailFields({ c }: { c?: ClientRow }) {
       <div className="sm:col-span-2">
         <label className="label">Allergies / Important Notes</label>
         <input name="notes" defaultValue={c?.notes ?? ""} className="input" />
+      </div>
+      <div className="sm:col-span-2">
+        <label className="flex items-center gap-2 rounded-lg border border-gold/40 bg-gold/10 px-3 py-2.5">
+          <input
+            type="checkbox"
+            name="deliveryApproved"
+            defaultChecked={c?.deliveryApproved}
+            className="h-5 w-5"
+          />
+          <span className="text-sm font-semibold text-navy">
+            Approved for delivery
+            <span className="block text-xs font-normal text-charcoal/60">
+              Lets this client sign in at the delivery portal with their Client
+              ID to shop and submit an order.
+            </span>
+          </span>
+        </label>
       </div>
     </>
   );
@@ -181,6 +200,19 @@ export default function ClientsManager({
   const reactivate = (id: number) => {
     startTransition(async () => {
       await reactivateClientAction(id);
+      router.refresh();
+    });
+  };
+
+  const hardDelete = (c: ClientRow) => {
+    if (
+      !confirm(
+        `Permanently delete ${c.name} (${c.clientId})? This removes the client and their family members for good. Past visit history is kept but no longer linked. This cannot be undone.`
+      )
+    )
+      return;
+    startTransition(async () => {
+      await deleteClientAction(c.id);
       router.refresh();
     });
   };
@@ -304,7 +336,14 @@ export default function ClientsManager({
               <>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <p className="font-semibold text-navy">{c.name}</p>
+                    <p className="font-semibold text-navy">
+                      {c.name}
+                      {c.deliveryApproved && (
+                        <span className="ml-2 rounded-full bg-gold/20 px-2 py-0.5 text-xs font-bold text-gold">
+                          🚚 Delivery
+                        </span>
+                      )}
+                    </p>
                     <p className="text-sm text-charcoal/60">
                       {c.clientId} · Family of {c.familySize} · {c.pointBudget} credits
                       {c.memberCount > 0 && ` · ${c.memberCount} member${c.memberCount === 1 ? "" : "s"} on file`}
@@ -353,6 +392,12 @@ export default function ClientsManager({
                         Reactivate
                       </button>
                     )}
+                    <button
+                      onClick={() => hardDelete(c)}
+                      className="rounded-lg border border-military/40 px-3 py-1.5 text-sm font-semibold text-military hover:bg-military/5"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </div>
 

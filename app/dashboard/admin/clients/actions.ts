@@ -23,6 +23,9 @@ function detailFields(formData: FormData) {
     email: get("email"),
     serviceNumber: get("serviceNumber"),
     notes: get("notes"),
+    deliveryApproved:
+      formData.get("deliveryApproved") === "on" ||
+      formData.get("deliveryApproved") === "true",
   };
 }
 
@@ -50,11 +53,11 @@ export async function createClientAction(
   await sql`
     INSERT INTO clients
       (client_id, name, family_size, point_budget, date_of_birth, gender,
-       address, contact, email, service_number, notes, is_active)
+       address, contact, email, service_number, notes, delivery_approved, is_active)
     VALUES (
       ${clientId}, ${name}, ${familySize}, ${pointBudget}, ${d.dob}::date,
       ${d.gender}, ${d.address}, ${d.contact}, ${d.email}, ${d.serviceNumber},
-      ${d.notes}, true
+      ${d.notes}, ${d.deliveryApproved}, true
     );
   `;
   revalidatePath("/dashboard/admin/clients");
@@ -80,9 +83,18 @@ export async function updateClientAction(
     SET name = ${name}, family_size = ${familySize}, point_budget = ${pointBudget},
         date_of_birth = ${d.dob}::date, gender = ${d.gender}, address = ${d.address},
         contact = ${d.contact}, email = ${d.email}, service_number = ${d.serviceNumber},
-        notes = ${d.notes}
+        notes = ${d.notes}, delivery_approved = ${d.deliveryApproved}
     WHERE id = ${id};
   `;
+  revalidatePath("/dashboard/admin/clients");
+  return { success: true };
+}
+
+export async function deleteClientAction(id: number): Promise<ActionResult> {
+  await requirePermission("clients");
+  // Cascades to family_members and orders; transaction history is kept
+  // (client_id is set NULL there).
+  await sql`DELETE FROM clients WHERE id = ${id};`;
   revalidatePath("/dashboard/admin/clients");
   return { success: true };
 }

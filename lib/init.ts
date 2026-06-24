@@ -86,6 +86,7 @@ export async function createTables(): Promise<void> {
       email TEXT,
       service_number TEXT,
       notes TEXT,
+      delivery_approved BOOLEAN NOT NULL DEFAULT false,
       is_active BOOLEAN NOT NULL DEFAULT true,
       archive_reason TEXT,
       archived_at TIMESTAMPTZ,
@@ -139,6 +140,28 @@ export async function createTables(): Promise<void> {
   `;
 
   await sql`
+    CREATE TABLE IF NOT EXISTS orders (
+      id SERIAL PRIMARY KEY,
+      client_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+      status TEXT NOT NULL DEFAULT 'pending'
+        CHECK (status IN ('pending', 'fulfilled', 'cancelled')),
+      points_used INTEGER NOT NULL DEFAULT 0,
+      notes TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      fulfilled_at TIMESTAMPTZ,
+      fulfilled_by INTEGER REFERENCES users(id) ON DELETE SET NULL
+    );
+  `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS order_items (
+      id SERIAL PRIMARY KEY,
+      order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+      item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+      quantity INTEGER NOT NULL,
+      point_value_at_time INTEGER NOT NULL DEFAULT 0
+    );
+  `;
+  await sql`
     CREATE TABLE IF NOT EXISTS appointments (
       id SERIAL PRIMARY KEY,
       client_id INTEGER REFERENCES clients(id) ON DELETE SET NULL,
@@ -173,6 +196,8 @@ export async function createTables(): Promise<void> {
   await sql`CREATE INDEX IF NOT EXISTS idx_item_prices_item ON item_prices(item_id);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(expense_date);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(appt_date);`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);`;
 }
 
 /**
@@ -293,6 +318,7 @@ export async function runMigrations(): Promise<void> {
   await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS email TEXT;`;
   await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS service_number TEXT;`;
   await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS notes TEXT;`;
+  await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS delivery_approved BOOLEAN NOT NULL DEFAULT false;`;
   // Family member extra fields.
   await sql`ALTER TABLE family_members ADD COLUMN IF NOT EXISTS email TEXT;`;
   await sql`ALTER TABLE family_members ADD COLUMN IF NOT EXISTS notes TEXT;`;

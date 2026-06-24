@@ -27,7 +27,14 @@ export default async function LoginPage() {
 
       <PinPad />
 
-      <p className="mt-10 text-center text-xs uppercase tracking-wider text-white/60">
+      <a
+        href="/portal"
+        className="mt-8 text-center text-sm font-semibold text-gold underline-offset-2 hover:underline"
+      >
+        Client delivery portal →
+      </a>
+
+      <p className="mt-6 text-center text-xs uppercase tracking-wider text-white/60">
         Proudly Supported by DriveX
       </p>
     </main>

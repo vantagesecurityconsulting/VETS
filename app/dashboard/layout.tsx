@@ -73,6 +73,7 @@ export default async function DashboardLayout({
                 {can("inventory") && <NavLink href="/dashboard/admin/inventory">Inventory</NavLink>}
                 {can("items") && <NavLink href="/dashboard/admin/items">Items</NavLink>}
                 {isManager && <NavLink href="/dashboard/admin/volunteers">Volunteers</NavLink>}
+                {can("orders") && <NavLink href="/dashboard/admin/orders">Orders</NavLink>}
                 {can("expenses") && <NavLink href="/dashboard/admin/expenses">Expenses</NavLink>}
                 {can("entries") && <NavLink href="/dashboard/admin/entries">Corrections</NavLink>}
                 {can("export") && <NavLink href="/dashboard/admin/export">Export</NavLink>}

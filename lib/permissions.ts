@@ -17,6 +17,7 @@ export const PERMISSIONS: PermissionDef[] = [
   { key: "reports", label: "Reports", desc: "View all reports" },
   { key: "expenses", label: "Expenses", desc: "Record & view expenses" },
   { key: "entries", label: "Corrections", desc: "Edit / correct entries" },
+  { key: "orders", label: "Delivery Orders", desc: "View & fulfill client delivery orders" },
   { key: "export", label: "Data Export", desc: "Download CSV backups" },
 ];
 

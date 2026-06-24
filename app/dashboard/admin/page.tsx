@@ -19,6 +19,7 @@ const adminLinks = [
   { href: "/dashboard/admin/inventory", title: "Inventory", desc: "Stock levels & expiry tracking", perm: "inventory" },
   { href: "/dashboard/admin/items", title: "Items & Categories", desc: "Manage catalog & point values", perm: "items" },
   { href: "/dashboard/admin/volunteers", title: "Volunteers", desc: "Manage accounts & PINs", perm: "manager" },
+  { href: "/dashboard/admin/orders", title: "Delivery Orders", desc: "Client orders to shop & deliver", perm: "orders" },
   { href: "/dashboard/admin/expenses", title: "Expenses", desc: "Track money spent & where it goes", perm: "expenses" },
   { href: "/dashboard/admin/entries", title: "Entries & Corrections", desc: "Fix entries made in error", perm: "entries" },
   { href: "/dashboard/admin/export", title: "Data Export & Backups", desc: "Download CSVs for Excel / Airtable / backups", perm: "export" },

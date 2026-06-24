@@ -1,0 +1,95 @@
+"use server";
+
+import { sql } from "@/lib/db";
+import { ensureInitialized } from "@/lib/init";
+import {
+  createClientSession,
+  destroyClientSession,
+  getClientSession,
+} from "@/lib/client-auth";
+import { revalidatePath } from "next/cache";
+
+export interface PortalResult {
+  success: boolean;
+  error?: string;
+  pointsUsed?: number;
+}
+
+export async function clientLoginAction(
+  clientIdRaw: string
+): Promise<PortalResult> {
+  await ensureInitialized();
+  const cid = (clientIdRaw || "").trim();
+  if (!cid) return { success: false, error: "Please enter your Client ID." };
+
+  const { rows } = await sql`
+    SELECT id, client_id, name, is_active, delivery_approved
+    FROM clients WHERE lower(client_id) = lower(${cid});
+  `;
+  if (rows.length === 0) {
+    return { success: false, error: "Client ID not found. Please check and try again." };
+  }
+  const c = rows[0];
+  if (!c.is_active) {
+    return { success: false, error: "This account isn't active. Please contact the food bank." };
+  }
+  if (!c.delivery_approved) {
+    return {
+      success: false,
+      error: "Your account isn't approved for delivery ordering yet. Please contact the food bank.",
+    };
+  }
+  await createClientSession({ clientPk: c.id, clientId: c.client_id, name: c.name });
+  return { success: true };
+}
+
+export async function clientLogoutAction(): Promise<void> {
+  await destroyClientSession();
+}
+
+export interface OrderLineInput {
+  itemId: number;
+  quantity: number;
+}
+
+export async function submitOrderAction(
+  lines: OrderLineInput[],
+  notes: string
+): Promise<PortalResult> {
+  const session = await getClientSession();
+  if (!session) {
+    return { success: false, error: "Your session expired — please sign in again." };
+  }
+  const clean = lines.filter((l) => l.quantity > 0);
+  if (clean.length === 0) {
+    return { success: false, error: "Add at least one item to your order." };
+  }
+
+  const itemIds = clean.map((l) => l.itemId);
+  const { rows: itemRows } = await sql.query(
+    `SELECT i.id AS item_id, c.point_value
+     FROM items i JOIN categories c ON c.id = i.category_id
+     WHERE i.id = ANY($1::int[])`,
+    [itemIds]
+  );
+  const pmap = new Map<number, number>(itemRows.map((r) => [r.item_id, r.point_value]));
+
+  let points = 0;
+  for (const l of clean) points += (pmap.get(l.itemId) ?? 0) * l.quantity;
+
+  const { rows: orderRows } = await sql`
+    INSERT INTO orders (client_id, status, points_used, notes)
+    VALUES (${session.clientPk}, 'pending', ${points}, ${notes || null})
+    RETURNING id;
+  `;
+  const orderId = orderRows[0].id as number;
+  for (const l of clean) {
+    const pv = pmap.get(l.itemId) ?? 0;
+    await sql`
+      INSERT INTO order_items (order_id, item_id, quantity, point_value_at_time)
+      VALUES (${orderId}, ${l.itemId}, ${l.quantity}, ${pv});
+    `;
+  }
+  revalidatePath("/dashboard/admin/orders");
+  return { success: true, pointsUsed: points };
+}
