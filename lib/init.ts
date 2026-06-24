@@ -212,7 +212,6 @@ export async function createTables(): Promise<void> {
   await sql`CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(appt_date);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);`;
-  await sql`CREATE INDEX IF NOT EXISTS idx_transactions_donor ON transactions(donor_id);`;
 }
 
 /**
@@ -336,6 +335,8 @@ export async function runMigrations(): Promise<void> {
   await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS delivery_approved BOOLEAN NOT NULL DEFAULT false;`;
   await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS portal_pin TEXT;`;
   await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS donor_id INTEGER REFERENCES donors(id) ON DELETE SET NULL;`;
+  // Index after the column exists (must follow the ADD COLUMN above).
+  await sql`CREATE INDEX IF NOT EXISTS idx_transactions_donor ON transactions(donor_id);`;
   // Family member extra fields.
   await sql`ALTER TABLE family_members ADD COLUMN IF NOT EXISTS email TEXT;`;
   await sql`ALTER TABLE family_members ADD COLUMN IF NOT EXISTS notes TEXT;`;
