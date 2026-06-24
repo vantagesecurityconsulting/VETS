@@ -34,6 +34,7 @@ export default function ClientShop({
   const router = useRouter();
   const [cart, setCart] = useState<Record<number, number>>({});
   const [notes, setNotes] = useState("");
+  const [search, setSearch] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState<{ pointsUsed: number } | null>(null);
@@ -57,6 +58,20 @@ export default function ClientShop({
 
   const remaining = budget - pointsUsed;
   const over = remaining < 0;
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return catalog;
+    return catalog
+      .map((c) => ({
+        ...c,
+        items: c.items.filter(
+          (i) =>
+            i.name.toLowerCase().includes(q) || c.name.toLowerCase().includes(q)
+        ),
+      }))
+      .filter((c) => c.items.length > 0);
+  }, [catalog, search]);
 
   const setQty = (itemId: number, qty: number) =>
     setCart((prev) => {
@@ -100,7 +115,7 @@ export default function ClientShop({
             You&apos;ll keep this on your file.
           </p>
           <div className="mt-5 flex gap-2">
-            <button onClick={() => { setDone(null); setCart({}); setNotes(""); router.refresh(); }} className="btn-primary">
+            <button onClick={() => { setDone(null); setCart({}); setNotes(""); setSearch(""); router.refresh(); }} className="btn-primary">
               Start a New Order
             </button>
             <button onClick={logout} className="btn-outline">Sign Out</button>
@@ -140,8 +155,18 @@ export default function ClientShop({
         <p className="mt-4 rounded-md bg-military/10 px-3 py-2 text-sm font-semibold text-military">{error}</p>
       )}
 
+      <input
+        className="input mt-4"
+        placeholder="Search items…"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+
       <div className="mt-5 space-y-5">
-        {catalog.map((cat) => (
+        {filtered.length === 0 && (
+          <p className="text-sm text-charcoal/50">No items match “{search}”.</p>
+        )}
+        {filtered.map((cat) => (
           <div key={cat.id} className="card">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-heading text-lg font-bold text-navy">{cat.name}</h2>

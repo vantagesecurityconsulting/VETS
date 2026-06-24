@@ -26,6 +26,7 @@ export default function VisitFlow({
   // cart: itemId -> quantity
   const [cart, setCart] = useState<Record<number, number>>({});
   const [notes, setNotes] = useState("");
+  const [itemSearch, setItemSearch] = useState("");
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState("");
   const [summary, setSummary] = useState<{
@@ -64,6 +65,20 @@ export default function VisitFlow({
   const budget = client?.pointBudget ?? 0;
   const remaining = budget - pointsUsed;
   const overBudget = remaining < 0;
+
+  const filteredCatalog = useMemo(() => {
+    const q = itemSearch.trim().toLowerCase();
+    if (!q) return catalog;
+    return catalog
+      .map((c) => ({
+        ...c,
+        items: c.items.filter(
+          (i) =>
+            i.name.toLowerCase().includes(q) || c.name.toLowerCase().includes(q)
+        ),
+      }))
+      .filter((c) => c.items.length > 0);
+  }, [catalog, itemSearch]);
 
   const doSearch = (value: string) => {
     setTerm(value);
@@ -118,6 +133,7 @@ export default function VisitFlow({
     setClient(null);
     setCart({});
     setNotes("");
+    setItemSearch("");
     setSummary(null);
     setError("");
     setMonthWarning(null);
@@ -244,8 +260,18 @@ export default function VisitFlow({
         </p>
       )}
 
+      <input
+        className="input mt-4"
+        placeholder="Search items…"
+        value={itemSearch}
+        onChange={(e) => setItemSearch(e.target.value)}
+      />
+
       <div className="mt-5 space-y-5">
-        {catalog.map((cat) => (
+        {filteredCatalog.length === 0 && (
+          <p className="text-sm text-charcoal/50">No items match “{itemSearch}”.</p>
+        )}
+        {filteredCatalog.map((cat) => (
           <div key={cat.id} className="card">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-heading text-lg font-bold text-navy">
