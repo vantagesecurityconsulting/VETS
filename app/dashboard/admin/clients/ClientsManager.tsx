@@ -124,7 +124,13 @@ function BudgetFields({
   );
 }
 
-export default function ClientsManager({ clients }: { clients: ClientRow[] }) {
+export default function ClientsManager({
+  clients,
+  nextClientId,
+}: {
+  clients: ClientRow[];
+  nextClientId: string;
+}) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [tab, setTab] = useState<"active" | "archived">("active");
@@ -244,7 +250,10 @@ export default function ClientsManager({ clients }: { clients: ClientRow[] }) {
         <form action={onAdd} className="card mt-4 grid gap-3 sm:grid-cols-2">
           <div>
             <label className="label">Client ID</label>
-            <input name="clientId" className="input" placeholder="VET-0042" required />
+            <input name="clientId" className="input" defaultValue={nextClientId} required />
+            <p className="mt-1 text-xs text-charcoal/50">
+              Auto-suggested next number — edit if needed.
+            </p>
           </div>
           <div>
             <label className="label">Name (head of household)</label>

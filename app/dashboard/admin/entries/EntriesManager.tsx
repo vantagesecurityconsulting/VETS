@@ -1,8 +1,14 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { Fragment, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { deleteEntryAction } from "./actions";
+import {
+  deleteEntryAction,
+  getEntryItemsAction,
+  updateEntryItemAction,
+  deleteEntryItemAction,
+  type EntryItem,
+} from "./actions";
 
 export interface EntryRow {
   id: number;
@@ -33,7 +39,46 @@ export default function EntriesManager({ entries }: { entries: EntryRow[] }) {
   const [, startTransition] = useTransition();
   const [filter, setFilter] = useState("all");
 
+  const [openId, setOpenId] = useState<number | null>(null);
+  const [items, setItems] = useState<EntryItem[]>([]);
+  const [draft, setDraft] = useState<Record<number, string>>({});
+
   const shown = entries.filter((e) => filter === "all" || e.type === filter);
+
+  const loadItems = async (id: number) => {
+    if (openId === id) return setOpenId(null);
+    const rows = await getEntryItemsAction(id);
+    setItems(rows);
+    setDraft(Object.fromEntries(rows.map((r) => [r.id, String(r.quantity)])));
+    setOpenId(id);
+  };
+
+  const saveItem = (rowId: number) => {
+    const v = Math.max(0, Number(draft[rowId]) || 0);
+    startTransition(async () => {
+      await updateEntryItemAction(rowId, v);
+      if (openId) {
+        const rows = await getEntryItemsAction(openId);
+        setItems(rows);
+        setDraft(Object.fromEntries(rows.map((r) => [r.id, String(r.quantity)])));
+      }
+      router.refresh();
+    });
+  };
+
+  const removeItem = (rowId: number) => {
+    if (!confirm("Remove this item from the entry and adjust inventory?")) return;
+    startTransition(async () => {
+      await deleteEntryItemAction(rowId);
+      if (openId) {
+        const rows = await getEntryItemsAction(openId);
+        setItems(rows);
+        setDraft(Object.fromEntries(rows.map((r) => [r.id, String(r.quantity)])));
+        if (rows.length === 0) setOpenId(null);
+      }
+      router.refresh();
+    });
+  };
 
   const del = (e: EntryRow) => {
     const reversal =
@@ -103,32 +148,96 @@ export default function EntriesManager({ entries }: { entries: EntryRow[] }) {
               </tr>
             )}
             {shown.map((e) => (
-              <tr key={e.id} className="border-t border-black/5">
-                <td className="px-3 py-2 whitespace-nowrap">{e.date}</td>
-                <td className="px-3 py-2">
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-bold ${
-                      TYPE_CLASS[e.type] ?? "bg-black/5"
-                    }`}
-                  >
-                    {TYPE_LABEL[e.type] ?? e.type}
-                  </span>
-                </td>
-                <td className="px-3 py-2">
-                  {e.client ? <span className="font-medium">{e.client} · </span> : null}
-                  {e.detail}
-                </td>
-                <td className="px-3 py-2">{e.items}</td>
-                <td className="px-3 py-2 text-charcoal/60">{e.who ?? "—"}</td>
-                <td className="px-3 py-2 text-right">
-                  <button
-                    onClick={() => del(e)}
-                    className="rounded px-2 py-1 text-xs font-semibold text-military"
-                  >
-                    Delete &amp; reverse
-                  </button>
-                </td>
-              </tr>
+              <Fragment key={e.id}>
+                <tr className="border-t border-black/5">
+                  <td className="px-3 py-2 whitespace-nowrap">{e.date}</td>
+                  <td className="px-3 py-2">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                        TYPE_CLASS[e.type] ?? "bg-black/5"
+                      }`}
+                    >
+                      {TYPE_LABEL[e.type] ?? e.type}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2">
+                    {e.client ? <span className="font-medium">{e.client} · </span> : null}
+                    {e.detail}
+                  </td>
+                  <td className="px-3 py-2">{e.items}</td>
+                  <td className="px-3 py-2 text-charcoal/60">{e.who ?? "—"}</td>
+                  <td className="px-3 py-2">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => loadItems(e.id)}
+                        className="rounded px-2 py-1 text-xs font-semibold text-navy"
+                      >
+                        {openId === e.id ? "Close" : "Edit items"}
+                      </button>
+                      <button
+                        onClick={() => del(e)}
+                        className="rounded px-2 py-1 text-xs font-semibold text-military"
+                      >
+                        Delete &amp; reverse
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {openId === e.id && (
+                  <tr className="border-t border-black/5 bg-navy/5">
+                    <td colSpan={6} className="px-3 py-3">
+                      <p className="mb-2 text-xs font-semibold text-navy">
+                        Edit individual items — changing a quantity or removing a
+                        line adjusts inventory automatically.
+                      </p>
+                      {items.length === 0 ? (
+                        <p className="text-sm text-charcoal/50">No items.</p>
+                      ) : (
+                        <div className="space-y-1.5">
+                          {items.map((it) => (
+                            <div
+                              key={it.id}
+                              className="flex flex-wrap items-center gap-2 rounded-md bg-white px-3 py-2 text-sm"
+                            >
+                              <span className="min-w-[10rem] flex-1 font-medium">
+                                {it.itemName}
+                              </span>
+                              <input
+                                type="number"
+                                min={0}
+                                value={draft[it.id] ?? ""}
+                                onChange={(ev) =>
+                                  setDraft((d) => ({ ...d, [it.id]: ev.target.value }))
+                                }
+                                className="w-20 rounded-md border border-navy/20 px-2 py-1 text-center"
+                              />
+                              <button
+                                onClick={() => saveItem(it.id)}
+                                className="btn-primary px-3 py-1 text-xs"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => removeItem(it.id)}
+                                className="rounded px-2 py-1 text-xs font-semibold text-military"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {e.type === "audit" && (
+                        <p className="mt-2 text-xs text-charcoal/50">
+                          Note: this is a stock count — editing these lines
+                          updates the record but does not change current
+                          inventory.
+                        </p>
+                      )}
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             ))}
           </tbody>
         </table>

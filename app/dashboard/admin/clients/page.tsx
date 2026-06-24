@@ -32,5 +32,13 @@ export default async function ClientsPage() {
     notes: r.notes,
   }));
 
-  return <ClientsManager clients={clients} />;
+  // Suggest the next Client ID (VET-#### based on the highest existing number).
+  let maxNum = 0;
+  for (const r of rows) {
+    const m = String(r.client_id || "").match(/(\d+)\s*$/);
+    if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+  }
+  const nextClientId = `VET-${String(maxNum + 1).padStart(4, "0")}`;
+
+  return <ClientsManager clients={clients} nextClientId={nextClientId} />;
 }
