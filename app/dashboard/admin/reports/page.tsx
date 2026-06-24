@@ -20,6 +20,7 @@ import {
   clientActivityReport,
   expensesReport,
   expenseTotal,
+  donationsByDonorReport,
 } from "@/lib/reports";
 import { WEIGHT_UNIT } from "@/lib/units";
 import ReportControls from "./ReportControls";
@@ -291,6 +292,22 @@ export default async function ReportsPage({
             ]}
           />
         </>
+      );
+      break;
+    }
+    case "donations-by-donor": {
+      const rows = await donationsByDonorReport(range);
+      content = (
+        <Table
+          rows={rows}
+          columns={[
+            { key: "donor", label: "Donor" },
+            { key: "donations", label: "Drop-offs" },
+            { key: "items", label: "Items" },
+            { key: "value", label: "Value", format: fmtMoney },
+            { key: "weight", label: "Weight", format: fmtWeight },
+          ]}
+        />
       );
       break;
     }

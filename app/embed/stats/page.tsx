@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 interface Stats {
   veteransHelped: number;
+  peopleServed: number;
   itemsDistributed: number;
   valueDistributed: number;
   poundsDistributed: number;
@@ -40,9 +41,9 @@ export default function StatsEmbed() {
   const cards = s
     ? [
         { label: "Veterans Helped", value: num(s.veteransHelped) },
+        { label: "People Served", value: num(s.peopleServed) },
         { label: "Food Distributed", value: `${num(Math.round(s.poundsDistributed))} ${s.weightUnit}` },
         { label: "Value Distributed", value: money(s.valueDistributed) },
-        { label: "Visits This Month", value: num(s.visitsThisMonth) },
       ]
     : [];
 

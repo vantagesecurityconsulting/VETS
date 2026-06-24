@@ -8,6 +8,11 @@ import {
   type NewItemInput,
 } from "./actions";
 
+export interface DonorOption {
+  id: number;
+  name: string;
+}
+
 interface LineState {
   quantity: number;
   expiry: string;
@@ -21,14 +26,18 @@ interface NewItemState {
 
 export default function DonationForm({
   catalog,
+  donors,
 }: {
   catalog: CatalogCategory[];
+  donors: DonorOption[];
 }) {
   const [lines, setLines] = useState<Record<number, LineState>>({});
   // Custom typed-in items, keyed by category id.
   const [newItems, setNewItems] = useState<Record<number, NewItemState>>({});
   const [notes, setNotes] = useState("");
   const [search, setSearch] = useState("");
+  const [donorChoice, setDonorChoice] = useState<string>(""); // "" | donorId | "new"
+  const [newDonorName, setNewDonorName] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState<{ totalItems: number } | null>(null);
@@ -99,7 +108,13 @@ export default function DonationForm({
         quantity: n.quantity,
         expiryDate: n.expiry || null,
       }));
-    const res = await logDonationAction(payload, notes, newPayload);
+    const donor =
+      donorChoice === "new"
+        ? { newDonorName }
+        : donorChoice
+        ? { donorId: Number(donorChoice) }
+        : {};
+    const res = await logDonationAction(payload, notes, newPayload, donor);
     if (!res.success) {
       setError(res.error || "Could not save donation.");
       setSaving(false);
@@ -114,6 +129,8 @@ export default function DonationForm({
     setNewItems({});
     setNotes("");
     setSearch("");
+    setDonorChoice("");
+    setNewDonorName("");
     setDone(null);
     setError("");
   };
@@ -143,6 +160,37 @@ export default function DonationForm({
       <p className="mt-1 text-charcoal/70">
         Enter quantities received. Set an expiry date for perishables.
       </p>
+
+      <div className="card mt-4">
+        <label className="label" htmlFor="donor">
+          Donor (optional)
+        </label>
+        <select
+          id="donor"
+          className="input"
+          value={donorChoice}
+          onChange={(e) => setDonorChoice(e.target.value)}
+        >
+          <option value="">— Anonymous / no donor —</option>
+          {donors.map((d) => (
+            <option key={d.id} value={String(d.id)}>
+              {d.name}
+            </option>
+          ))}
+          <option value="new">+ Add a new donor…</option>
+        </select>
+        {donorChoice === "new" && (
+          <input
+            className="input mt-2"
+            placeholder="New donor name"
+            value={newDonorName}
+            onChange={(e) => setNewDonorName(e.target.value)}
+          />
+        )}
+        <p className="mt-1 text-xs text-charcoal/50">
+          Linking a donor lets you print a donation report for them later.
+        </p>
+      </div>
 
       <input
         className="input mt-4"

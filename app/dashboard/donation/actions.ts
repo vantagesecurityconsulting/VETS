@@ -23,10 +23,16 @@ export interface DonationResult {
   totalItems?: number;
 }
 
+export interface DonorInput {
+  donorId?: number | null;
+  newDonorName?: string;
+}
+
 export async function logDonationAction(
   lines: DonationLineInput[],
   notes: string,
-  newItems: NewItemInput[] = []
+  newItems: NewItemInput[] = [],
+  donor: DonorInput = {}
 ): Promise<DonationResult> {
   const session = await requireAuth();
 
@@ -64,9 +70,22 @@ export async function logDonationAction(
     clean.push({ itemId, quantity: n.quantity, expiryDate: n.expiryDate ?? null });
   }
 
+  // Resolve donor: use selected donor, or create a new one from a typed name.
+  let donorId: number | null = donor.donorId ?? null;
+  const newName = (donor.newDonorName || "").trim();
+  if (!donorId && newName) {
+    const existing = await sql`SELECT id FROM donors WHERE lower(name) = lower(${newName});`;
+    if (existing.rows.length > 0) {
+      donorId = existing.rows[0].id as number;
+    } else {
+      const created = await sql`INSERT INTO donors (name) VALUES (${newName}) RETURNING id;`;
+      donorId = created.rows[0].id as number;
+    }
+  }
+
   const { rows: txnRows } = await sql`
-    INSERT INTO transactions (type, volunteer_id, notes)
-    VALUES ('stock_in', ${session.userId}, ${notes || null})
+    INSERT INTO transactions (type, volunteer_id, donor_id, notes)
+    VALUES ('stock_in', ${session.userId}, ${donorId}, ${notes || null})
     RETURNING id;
   `;
   const transactionId = txnRows[0].id as number;

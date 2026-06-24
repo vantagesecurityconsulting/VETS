@@ -12,6 +12,7 @@ const REPORTS = [
   { key: "volunteers", label: "Volunteer Activity" },
   { key: "points", label: "Points Usage" },
   { key: "value-clients", label: "Value by Client" },
+  { key: "donations-by-donor", label: "Donations by Donor" },
   { key: "waste", label: "Write-Offs" },
   { key: "most-needed", label: "Most Needed" },
   { key: "client-activity", label: "Client Activity" },

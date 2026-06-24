@@ -21,6 +21,9 @@ export async function GET() {
       SELECT
         (SELECT COUNT(DISTINCT client_id) FROM transactions
           WHERE type = 'stock_out' AND client_id IS NOT NULL)::int AS veterans,
+        COALESCE((SELECT SUM(family_size) FROM clients WHERE id IN (
+          SELECT DISTINCT client_id FROM transactions WHERE type = 'stock_out' AND client_id IS NOT NULL
+        )), 0)::int AS people,
         COALESCE((SELECT SUM(ti.quantity) FROM transaction_items ti
           JOIN transactions t ON t.id = ti.transaction_id
           WHERE t.type = 'stock_out'), 0)::int AS items,
@@ -39,6 +42,7 @@ export async function GET() {
     return NextResponse.json(
       {
         veteransHelped: r.veterans ?? 0,
+        peopleServed: r.people ?? 0,
         itemsDistributed: r.items ?? 0,
         valueDistributed: Number(r.value ?? 0),
         poundsDistributed: Number(r.weight ?? 0),

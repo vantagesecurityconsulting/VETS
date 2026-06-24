@@ -7,6 +7,7 @@ const EXPORTS = [
   { type: "family_members", title: "Family Members", desc: "Household members with details & allergy notes" },
   { type: "inventory", title: "Inventory", desc: "Current stock with prices, weights, values, expiry" },
   { type: "transactions", title: "Transactions", desc: "Every visit, donation, count & write-off" },
+  { type: "donors", title: "Donors", desc: "Donor registry with totals donated" },
   { type: "expenses", title: "Expenses", desc: "Recorded spending by date and category" },
   { type: "appointments", title: "Appointments", desc: "Booked shopping appointments" },
   { type: "volunteer_hours", title: "Volunteer Hours", desc: "Logged hours & activity notes" },

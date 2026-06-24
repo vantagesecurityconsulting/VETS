@@ -6,6 +6,7 @@ export const DEFAULT_LOW_STOCK_THRESHOLD = 5;
 
 export interface LifetimeTotals {
   veteransHelped: number;
+  peopleServed: number;
   valueDistributed: number;
   weightDistributed: number;
 }
@@ -16,6 +17,14 @@ export async function getLifetimeTotals(): Promise<LifetimeTotals> {
     SELECT COUNT(DISTINCT client_id)::int AS count
     FROM transactions
     WHERE type = 'stock_out' AND client_id IS NOT NULL;
+  `;
+  const { rows: peopleRows } = await sql`
+    SELECT COALESCE(SUM(family_size), 0)::int AS people
+    FROM clients
+    WHERE id IN (
+      SELECT DISTINCT client_id FROM transactions
+      WHERE type = 'stock_out' AND client_id IS NOT NULL
+    );
   `;
   const { rows: valRows } = await sql`
     SELECT
@@ -28,6 +37,7 @@ export async function getLifetimeTotals(): Promise<LifetimeTotals> {
   `;
   return {
     veteransHelped: vetRows[0]?.count ?? 0,
+    peopleServed: peopleRows[0]?.people ?? 0,
     valueDistributed: Number(valRows[0]?.value ?? 0),
     weightDistributed: Number(valRows[0]?.weight ?? 0),
   };

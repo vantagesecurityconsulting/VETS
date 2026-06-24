@@ -238,6 +238,28 @@ export async function expenseTotal(range: DateRange): Promise<number> {
   return Number(rows[0]?.total ?? 0);
 }
 
+// Donations grouped by donor (date-filtered).
+export async function donationsByDonorReport(range: DateRange) {
+  const { start, end } = bounds(range);
+  const { rows } = await sql`
+    SELECT
+      COALESCE(d.name, '(no donor recorded)') AS donor,
+      COUNT(DISTINCT t.id)::int AS donations,
+      SUM(ti.quantity)::int AS items,
+      ROUND(SUM(ti.quantity * i.unit_price), 2) AS value,
+      ROUND(SUM(ti.quantity * i.unit_weight), 2) AS weight
+    FROM transactions t
+    LEFT JOIN donors d ON d.id = t.donor_id
+    JOIN transaction_items ti ON ti.transaction_id = t.id
+    JOIN items i ON i.id = ti.item_id
+    WHERE t.type = 'stock_in'
+      AND t.created_at BETWEEN ${start} AND ${end}
+    GROUP BY d.name
+    ORDER BY value DESC;
+  `;
+  return rows;
+}
+
 // Write-off / waste report
 export async function wasteReport(range: DateRange) {
   const { start, end } = bounds(range);

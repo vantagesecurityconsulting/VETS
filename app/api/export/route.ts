@@ -73,6 +73,24 @@ async function buildExport(type: string): Promise<Export | null> {
         rows: rows.map((r) => [r.id, r.type, new Date(r.created_at).toISOString(), r.client, r.client_id, r.volunteer, r.items, r.credits, r.value, r.weight, r.notes]),
       };
     }
+    case "donors": {
+      const { rows } = await sql`
+        SELECT d.name, d.contact, d.email, d.address, d.notes,
+               CASE WHEN d.is_active THEN 'active' ELSE 'inactive' END AS status,
+               COALESCE(SUM(ti.quantity), 0)::int AS items,
+               COALESCE(ROUND(SUM(ti.quantity * i.unit_price), 2), 0) AS value,
+               COALESCE(ROUND(SUM(ti.quantity * i.unit_weight), 2), 0) AS weight
+        FROM donors d
+        LEFT JOIN transactions t ON t.donor_id = d.id AND t.type = 'stock_in'
+        LEFT JOIN transaction_items ti ON ti.transaction_id = t.id
+        LEFT JOIN items i ON i.id = ti.item_id
+        GROUP BY d.id ORDER BY d.name;
+      `;
+      return {
+        headers: ["Donor", "Contact", "Email", "Address", "Notes", "Status", "Items Donated", "Total Value", "Total Weight"],
+        rows: rows.map((r) => [r.name, r.contact, r.email, r.address, r.notes, r.status, r.items, Number(r.value).toFixed(2), Number(r.weight)]),
+      };
+    }
     case "expenses": {
       const { rows } = await sql`
         SELECT e.expense_date, e.category, e.description, e.vendor, e.amount, u.name AS entered_by

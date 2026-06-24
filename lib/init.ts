@@ -110,10 +110,23 @@ export async function createTables(): Promise<void> {
     );
   `;
   await sql`
+    CREATE TABLE IF NOT EXISTS donors (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      contact TEXT,
+      email TEXT,
+      address TEXT,
+      notes TEXT,
+      is_active BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `;
+  await sql`
     CREATE TABLE IF NOT EXISTS transactions (
       id SERIAL PRIMARY KEY,
       type TEXT NOT NULL CHECK (type IN ('stock_in', 'stock_out', 'audit', 'waste')),
       client_id INTEGER REFERENCES clients(id) ON DELETE SET NULL,
+      donor_id INTEGER REFERENCES donors(id) ON DELETE SET NULL,
       volunteer_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
       notes TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -199,6 +212,7 @@ export async function createTables(): Promise<void> {
   await sql`CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(appt_date);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_transactions_donor ON transactions(donor_id);`;
 }
 
 /**
@@ -321,6 +335,7 @@ export async function runMigrations(): Promise<void> {
   await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS notes TEXT;`;
   await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS delivery_approved BOOLEAN NOT NULL DEFAULT false;`;
   await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS portal_pin TEXT;`;
+  await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS donor_id INTEGER REFERENCES donors(id) ON DELETE SET NULL;`;
   // Family member extra fields.
   await sql`ALTER TABLE family_members ADD COLUMN IF NOT EXISTS email TEXT;`;
   await sql`ALTER TABLE family_members ADD COLUMN IF NOT EXISTS notes TEXT;`;
