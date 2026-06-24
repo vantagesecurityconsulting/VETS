@@ -10,6 +10,7 @@ export default async function ClientsPage() {
     SELECT c.id, c.client_id, c.name, c.family_size, c.point_budget, c.is_active,
            c.archive_reason, c.date_of_birth, c.gender, c.address, c.contact,
            c.email, c.service_number, c.notes, c.delivery_approved,
+           (c.portal_pin IS NOT NULL) AS has_portal_pin,
            (SELECT COUNT(*)::int FROM family_members fm WHERE fm.client_id = c.id) AS member_count
     FROM clients c
     ORDER BY c.is_active DESC, c.name;
@@ -31,6 +32,7 @@ export default async function ClientsPage() {
     serviceNumber: r.service_number,
     notes: r.notes,
     deliveryApproved: r.delivery_approved,
+    hasPortalPin: r.has_portal_pin,
   }));
 
   // Suggest the next Client ID (VET-#### based on the highest existing number).

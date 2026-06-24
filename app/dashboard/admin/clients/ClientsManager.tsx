@@ -33,6 +33,7 @@ export interface ClientRow {
   serviceNumber: string | null;
   notes: string | null;
   deliveryApproved: boolean;
+  hasPortalPin: boolean;
 }
 
 /** Shared detail inputs for the head of household (used in add & edit forms). */
@@ -79,10 +80,31 @@ function ClientDetailFields({ c }: { c?: ClientRow }) {
             Approved for delivery
             <span className="block text-xs font-normal text-charcoal/60">
               Lets this client sign in at the delivery portal with their Client
-              ID to shop and submit an order.
+              ID + PIN to shop and submit an order.
             </span>
           </span>
         </label>
+      </div>
+      <div className="sm:col-span-2">
+        <label className="label">
+          Delivery portal PIN (4–6 digits)
+          {c?.hasPortalPin && (
+            <span className="ml-2 text-xs font-normal text-green-700">✓ PIN set</span>
+          )}
+        </label>
+        <input
+          name="portalPin"
+          type="password"
+          inputMode="numeric"
+          pattern="\d{4,6}"
+          maxLength={6}
+          autoComplete="off"
+          className="input"
+          placeholder={c?.hasPortalPin ? "Leave blank to keep current PIN" : "Set a PIN for portal login"}
+        />
+        <p className="mt-1 text-xs text-charcoal/50">
+          The client signs in to the delivery portal with their Client ID and this PIN.
+        </p>
       </div>
     </>
   );

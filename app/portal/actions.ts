@@ -2,6 +2,7 @@
 
 import { sql } from "@/lib/db";
 import { ensureInitialized } from "@/lib/init";
+import { verifyPin } from "@/lib/auth";
 import {
   createClientSession,
   destroyClientSession,
@@ -16,19 +17,22 @@ export interface PortalResult {
 }
 
 export async function clientLoginAction(
-  clientIdRaw: string
+  clientIdRaw: string,
+  pinRaw: string
 ): Promise<PortalResult> {
   await ensureInitialized();
   const cid = (clientIdRaw || "").trim();
+  const pin = (pinRaw || "").trim();
   if (!cid) return { success: false, error: "Please enter your Client ID." };
+  if (!pin) return { success: false, error: "Please enter your PIN." };
 
   const { rows } = await sql`
-    SELECT id, client_id, name, is_active, delivery_approved
+    SELECT id, client_id, name, is_active, delivery_approved, portal_pin
     FROM clients WHERE lower(client_id) = lower(${cid});
   `;
-  if (rows.length === 0) {
-    return { success: false, error: "Client ID not found. Please check and try again." };
-  }
+  // Generic message for not-found / wrong-pin so IDs can't be probed.
+  const generic = { success: false, error: "Incorrect Client ID or PIN." };
+  if (rows.length === 0) return generic;
   const c = rows[0];
   if (!c.is_active) {
     return { success: false, error: "This account isn't active. Please contact the food bank." };
@@ -39,6 +43,12 @@ export async function clientLoginAction(
       error: "Your account isn't approved for delivery ordering yet. Please contact the food bank.",
     };
   }
+  if (!c.portal_pin) {
+    return { success: false, error: "No portal PIN is set for this account yet. Please contact the food bank." };
+  }
+  const ok = await verifyPin(pin, c.portal_pin);
+  if (!ok) return generic;
+
   await createClientSession({ clientPk: c.id, clientId: c.client_id, name: c.name });
   return { success: true };
 }

@@ -1,9 +1,13 @@
 "use server";
 
 import { sql } from "@/lib/db";
-import { requirePermission } from "@/lib/auth";
+import { requirePermission, hashPin } from "@/lib/auth";
 import { defaultPointBudget } from "@/lib/points";
 import { revalidatePath } from "next/cache";
+
+function portalPinRaw(formData: FormData): string {
+  return String(formData.get("portalPin") || "").trim();
+}
 
 export interface ActionResult {
   success: boolean;
@@ -50,14 +54,20 @@ export async function createClientAction(
     return { success: false, error: "That Client ID already exists." };
   }
 
+  const pinRaw = portalPinRaw(formData);
+  if (pinRaw && !/^\d{4,6}$/.test(pinRaw)) {
+    return { success: false, error: "Portal PIN must be 4–6 digits." };
+  }
+  const portalPin = pinRaw ? await hashPin(pinRaw) : null;
+
   await sql`
     INSERT INTO clients
       (client_id, name, family_size, point_budget, date_of_birth, gender,
-       address, contact, email, service_number, notes, delivery_approved, is_active)
+       address, contact, email, service_number, notes, delivery_approved, portal_pin, is_active)
     VALUES (
       ${clientId}, ${name}, ${familySize}, ${pointBudget}, ${d.dob}::date,
       ${d.gender}, ${d.address}, ${d.contact}, ${d.email}, ${d.serviceNumber},
-      ${d.notes}, ${d.deliveryApproved}, true
+      ${d.notes}, ${d.deliveryApproved}, ${portalPin}, true
     );
   `;
   revalidatePath("/dashboard/admin/clients");
@@ -86,6 +96,17 @@ export async function updateClientAction(
         notes = ${d.notes}, delivery_approved = ${d.deliveryApproved}
     WHERE id = ${id};
   `;
+
+  // Update the portal PIN only when a new one is entered (blank keeps existing).
+  const pinRaw = portalPinRaw(formData);
+  if (pinRaw) {
+    if (!/^\d{4,6}$/.test(pinRaw)) {
+      return { success: false, error: "Portal PIN must be 4–6 digits." };
+    }
+    const hashed = await hashPin(pinRaw);
+    await sql`UPDATE clients SET portal_pin = ${hashed} WHERE id = ${id};`;
+  }
+
   revalidatePath("/dashboard/admin/clients");
   return { success: true };
 }

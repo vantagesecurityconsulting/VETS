@@ -7,6 +7,7 @@ import { clientLoginAction } from "./actions";
 export default function PortalLogin() {
   const router = useRouter();
   const [clientId, setClientId] = useState("");
+  const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -14,7 +15,7 @@ export default function PortalLogin() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    const res = await clientLoginAction(clientId);
+    const res = await clientLoginAction(clientId, pin);
     if (!res.success) {
       setError(res.error || "Sign in failed.");
       setLoading(false);
@@ -44,6 +45,21 @@ export default function PortalLogin() {
           placeholder="VET-0001"
           value={clientId}
           onChange={(e) => setClientId(e.target.value)}
+        />
+        <label className="label mt-3" htmlFor="pin">
+          PIN
+        </label>
+        <input
+          id="pin"
+          type="password"
+          inputMode="numeric"
+          pattern="\d{4,6}"
+          maxLength={6}
+          autoComplete="off"
+          className="input text-center text-lg tracking-[0.4em]"
+          placeholder="••••"
+          value={pin}
+          onChange={(e) => setPin(e.target.value)}
         />
         {error && (
           <p className="mt-3 rounded-md bg-military/10 px-3 py-2 text-sm font-semibold text-military">

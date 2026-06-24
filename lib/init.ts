@@ -87,6 +87,7 @@ export async function createTables(): Promise<void> {
       service_number TEXT,
       notes TEXT,
       delivery_approved BOOLEAN NOT NULL DEFAULT false,
+      portal_pin TEXT,
       is_active BOOLEAN NOT NULL DEFAULT true,
       archive_reason TEXT,
       archived_at TIMESTAMPTZ,
@@ -319,6 +320,7 @@ export async function runMigrations(): Promise<void> {
   await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS service_number TEXT;`;
   await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS notes TEXT;`;
   await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS delivery_approved BOOLEAN NOT NULL DEFAULT false;`;
+  await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS portal_pin TEXT;`;
   // Family member extra fields.
   await sql`ALTER TABLE family_members ADD COLUMN IF NOT EXISTS email TEXT;`;
   await sql`ALTER TABLE family_members ADD COLUMN IF NOT EXISTS notes TEXT;`;
