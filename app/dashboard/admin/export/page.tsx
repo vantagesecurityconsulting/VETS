@@ -10,6 +10,7 @@ const EXPORTS = [
   { type: "donors", title: "Donors", desc: "Donor registry with totals donated" },
   { type: "cash_donations", title: "Cash & Gift Donations", desc: "Cash, e-transfer & gift card donations" },
   { type: "gift_cards", title: "Gift Cards Given", desc: "Gift cards handed to clients on visits" },
+  { type: "holiday_baskets", title: "Holiday Baskets", desc: "Holiday baskets given to clients by occasion & year" },
   { type: "expenses", title: "Expenses", desc: "Recorded spending by date and category" },
   { type: "appointments", title: "Appointments", desc: "Booked shopping appointments" },
   { type: "volunteer_hours", title: "Volunteer Hours", desc: "Logged hours & activity notes" },

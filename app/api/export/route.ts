@@ -119,6 +119,20 @@ async function buildExport(type: string): Promise<Export | null> {
         rows: rows.map((r) => [new Date(r.created_at).toISOString(), r.client, r.client_id, r.store, Number(r.amount).toFixed(2), r.volunteer]),
       };
     }
+    case "holiday_baskets": {
+      const { rows } = await sql`
+        SELECT cl.client_id, cl.name AS client, hb.holiday, hb.year, hb.notes,
+               u.name AS given_by, hb.given_at
+        FROM holiday_baskets hb
+        JOIN clients cl ON cl.id = hb.client_id
+        LEFT JOIN users u ON u.id = hb.given_by
+        ORDER BY hb.year DESC, hb.given_at DESC;
+      `;
+      return {
+        headers: ["Client ID", "Client", "Holiday", "Year", "Notes", "Given By", "Given At"],
+        rows: rows.map((r) => [r.client_id, r.client, r.holiday, r.year, r.notes, r.given_by, new Date(r.given_at).toISOString().slice(0, 10)]),
+      };
+    }
     case "expenses": {
       const { rows } = await sql`
         SELECT e.expense_date, e.category, e.description, e.vendor, e.amount, u.name AS entered_by

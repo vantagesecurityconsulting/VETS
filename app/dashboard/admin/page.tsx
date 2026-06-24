@@ -16,6 +16,7 @@ export const dynamic = "force-dynamic";
 
 const adminLinks = [
   { href: "/dashboard/admin/clients", title: "Clients", desc: "Manage client records & visit history", perm: "clients" },
+  { href: "/dashboard/admin/baskets", title: "Holiday Baskets", desc: "Log & track Easter, Christmas, Back to School baskets", perm: "clients" },
   { href: "/dashboard/admin/inventory", title: "Inventory", desc: "Stock levels & expiry tracking", perm: "inventory" },
   { href: "/dashboard/admin/items", title: "Items & Categories", desc: "Manage catalog & point values", perm: "items" },
   { href: "/dashboard/admin/volunteers", title: "Volunteers", desc: "Manage accounts & PINs", perm: "manager" },

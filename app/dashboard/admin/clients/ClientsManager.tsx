@@ -12,9 +12,14 @@ import {
   getFamilyMembersAction,
   addFamilyMemberAction,
   deleteFamilyMemberAction,
+  getClientBasketsAction,
+  addBasketAction,
+  deleteBasketAction,
   type VisitHistoryRow,
   type FamilyMember,
+  type HolidayBasket,
 } from "./actions";
+import { HOLIDAYS } from "@/lib/holidays";
 
 export interface ClientRow {
   id: number;
@@ -184,6 +189,8 @@ export default function ClientsManager({
   const [history, setHistory] = useState<VisitHistoryRow[]>([]);
   const [familyFor, setFamilyFor] = useState<number | null>(null);
   const [family, setFamily] = useState<FamilyMember[]>([]);
+  const [basketsFor, setBasketsFor] = useState<number | null>(null);
+  const [baskets, setBaskets] = useState<HolidayBasket[]>([]);
 
   const list = clients.filter((c) => (tab === "active" ? c.isActive : !c.isActive));
   const filtered = list.filter(
@@ -242,6 +249,7 @@ export default function ClientsManager({
   const loadHistory = async (id: number) => {
     if (historyFor === id) return setHistoryFor(null);
     setFamilyFor(null);
+    setBasketsFor(null);
     const rows = await getClientHistoryAction(id);
     setHistory(rows);
     setHistoryFor(id);
@@ -250,9 +258,34 @@ export default function ClientsManager({
   const loadFamily = async (id: number) => {
     if (familyFor === id) return setFamilyFor(null);
     setHistoryFor(null);
+    setBasketsFor(null);
     const rows = await getFamilyMembersAction(id);
     setFamily(rows);
     setFamilyFor(id);
+  };
+
+  const loadBaskets = async (id: number) => {
+    if (basketsFor === id) return setBasketsFor(null);
+    setHistoryFor(null);
+    setFamilyFor(null);
+    const rows = await getClientBasketsAction(id);
+    setBaskets(rows);
+    setBasketsFor(id);
+  };
+
+  const addBasket = async (fd: FormData) => {
+    setError("");
+    const res = await addBasketAction(fd);
+    if (!res.success) return setError(res.error || "Failed.");
+    const clientId = Number(fd.get("clientId"));
+    setBaskets(await getClientBasketsAction(clientId));
+    router.refresh();
+  };
+
+  const removeBasket = async (basketId: number, clientId: number) => {
+    await deleteBasketAction(basketId);
+    setBaskets(await getClientBasketsAction(clientId));
+    router.refresh();
   };
 
   const addMember = async (fd: FormData) => {
@@ -399,6 +432,9 @@ export default function ClientsManager({
                     <button onClick={() => loadFamily(c.id)} className="btn-outline text-sm">
                       {familyFor === c.id ? "Hide Family" : "Family"}
                     </button>
+                    <button onClick={() => loadBaskets(c.id)} className="btn-outline text-sm">
+                      {basketsFor === c.id ? "Hide Baskets" : "🎁 Baskets"}
+                    </button>
                     <button onClick={() => loadHistory(c.id)} className="btn-outline text-sm">
                       {historyFor === c.id ? "Hide History" : "History"}
                     </button>
@@ -484,6 +520,81 @@ export default function ClientsManager({
                       />
                       <div className="sm:col-span-3">
                         <button className="btn-primary text-sm">+ Add Member</button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+
+                {/* Holiday baskets panel */}
+                {basketsFor === c.id && (
+                  <div className="mt-3 border-t border-black/5 pt-3">
+                    <p className="mb-2 text-sm font-semibold text-navy">
+                      🎁 Holiday Baskets{" "}
+                      <span className="font-normal text-charcoal/50">
+                        (Easter, Christmas, Back to School &amp; more)
+                      </span>
+                    </p>
+                    {baskets.length === 0 ? (
+                      <p className="text-sm text-charcoal/50">
+                        No holiday baskets logged yet.
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {baskets.map((b) => (
+                          <div
+                            key={b.id}
+                            className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-offwhite px-3 py-2 text-sm"
+                          >
+                            <div>
+                              <span className="font-medium">
+                                {b.holiday} {b.year}
+                              </span>
+                              <span className="text-charcoal/50">
+                                {` · given ${b.givenAt}`}
+                                {b.givenBy ? ` · by ${b.givenBy}` : ""}
+                              </span>
+                              {b.notes && (
+                                <span className="block text-xs text-charcoal/50">
+                                  {b.notes}
+                                </span>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => removeBasket(b.id, c.id)}
+                              className="rounded px-2 py-1 text-xs font-semibold text-military"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <form action={addBasket} className="mt-3 grid gap-2 sm:grid-cols-4">
+                      <input type="hidden" name="clientId" value={c.id} />
+                      <select name="holiday" className="input" defaultValue="" required>
+                        <option value="" disabled>
+                          Holiday…
+                        </option>
+                        {HOLIDAYS.map((h) => (
+                          <option key={h} value={h}>
+                            {h}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        name="year"
+                        type="number"
+                        className="input"
+                        defaultValue={new Date().getFullYear()}
+                        title="Year"
+                      />
+                      <input
+                        name="notes"
+                        placeholder="Notes (optional)"
+                        className="input sm:col-span-2"
+                      />
+                      <div className="sm:col-span-4">
+                        <button className="btn-primary text-sm">+ Log Basket Given</button>
                       </div>
                     </form>
                   </div>

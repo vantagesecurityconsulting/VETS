@@ -239,6 +239,17 @@ export async function createTables(): Promise<void> {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS holiday_baskets (
+      id SERIAL PRIMARY KEY,
+      client_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+      holiday TEXT NOT NULL,
+      year INTEGER NOT NULL,
+      notes TEXT,
+      given_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      given_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `;
 
   await sql`CREATE INDEX IF NOT EXISTS idx_items_category ON items(category_id);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_inventory_item ON inventory(item_id);`;
@@ -254,6 +265,8 @@ export async function createTables(): Promise<void> {
   await sql`CREATE INDEX IF NOT EXISTS idx_visit_gift_cards_txn ON visit_gift_cards(transaction_id);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_holiday_baskets_client ON holiday_baskets(client_id);`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_holiday_baskets_holiday ON holiday_baskets(holiday, year);`;
 }
 
 /**
