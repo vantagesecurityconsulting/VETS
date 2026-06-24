@@ -9,7 +9,8 @@ export default async function CashDonationsPage() {
 
   const { rows } = await sql`
     SELECT cd.id, cd.method, cd.amount, cd.gift_card_store, cd.donation_date,
-           cd.notes, COALESCE(d.name, cd.donor_name) AS donor, u.name AS recorded_by
+           cd.notes, cd.tax_receipt_needed,
+           COALESCE(d.name, cd.donor_name) AS donor, u.name AS recorded_by
     FROM cash_donations cd
     LEFT JOIN donors d ON d.id = cd.donor_id
     LEFT JOIN users u ON u.id = cd.recorded_by
@@ -25,6 +26,7 @@ export default async function CashDonationsPage() {
     donor: r.donor,
     notes: r.notes,
     recordedBy: r.recorded_by,
+    taxReceiptNeeded: r.tax_receipt_needed,
   }));
 
   const { rows: totalRows } = await sql`

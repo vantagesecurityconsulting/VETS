@@ -20,6 +20,10 @@ export async function addCashDonationAction(
   const amount = Math.max(0, Number(formData.get("amount")) || 0);
   const giftCardStore = String(formData.get("giftCardStore") || "").trim();
   const notes = String(formData.get("notes") || "").trim();
+  const taxReceipt =
+    formData.get("taxReceipt") === "on" || formData.get("taxReceipt") === "true";
+  const receiptContact = String(formData.get("receiptContact") || "").trim();
+  const receiptAddress = String(formData.get("receiptAddress") || "").trim();
 
   // Donor: pick existing, type a new one, or anonymous.
   const donorChoice = String(formData.get("donorChoice") || "").trim();
@@ -40,10 +44,12 @@ export async function addCashDonationAction(
 
   await sql`
     INSERT INTO cash_donations
-      (donor_id, donor_name, method, amount, gift_card_store, donation_date, notes, recorded_by)
+      (donor_id, donor_name, method, amount, gift_card_store, donation_date, notes,
+       tax_receipt_needed, receipt_contact, receipt_address, recorded_by)
     VALUES (
       ${donorId}, ${donorName}, ${method}, ${amount},
-      ${giftCardStore || null}, ${date || null}::date, ${notes || null}, ${session.userId}
+      ${giftCardStore || null}, ${date || null}::date, ${notes || null},
+      ${taxReceipt}, ${receiptContact || null}, ${receiptAddress || null}, ${session.userId}
     );
   `;
   revalidatePath(PATH);

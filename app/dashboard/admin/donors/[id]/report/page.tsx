@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requirePermission } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import { WEIGHT_UNIT } from "@/lib/units";
+import { CHARITY_REG_NUMBER } from "@/lib/org";
 import PrintButton from "@/components/PrintButton";
 
 export const dynamic = "force-dynamic";
@@ -174,6 +175,8 @@ export default async function DonorReportPage({
 
       <p className="mt-8 text-center text-xs text-charcoal/40">
         Thank you for supporting our veterans. · VETS Canada — Dartmouth Food Bank
+        <br />
+        Charity Registration No. {CHARITY_REG_NUMBER}
       </p>
     </div>
   );

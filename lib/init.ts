@@ -199,6 +199,9 @@ export async function createTables(): Promise<void> {
       gift_card_store TEXT,
       donation_date DATE NOT NULL DEFAULT CURRENT_DATE,
       notes TEXT,
+      tax_receipt_needed BOOLEAN NOT NULL DEFAULT false,
+      receipt_contact TEXT,
+      receipt_address TEXT,
       recorded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
@@ -366,6 +369,10 @@ export async function runMigrations(): Promise<void> {
   await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS donor_id INTEGER REFERENCES donors(id) ON DELETE SET NULL;`;
   // Index after the column exists (must follow the ADD COLUMN above).
   await sql`CREATE INDEX IF NOT EXISTS idx_transactions_donor ON transactions(donor_id);`;
+  // Cash donation tax-receipt fields.
+  await sql`ALTER TABLE cash_donations ADD COLUMN IF NOT EXISTS tax_receipt_needed BOOLEAN NOT NULL DEFAULT false;`;
+  await sql`ALTER TABLE cash_donations ADD COLUMN IF NOT EXISTS receipt_contact TEXT;`;
+  await sql`ALTER TABLE cash_donations ADD COLUMN IF NOT EXISTS receipt_address TEXT;`;
   // Family member extra fields.
   await sql`ALTER TABLE family_members ADD COLUMN IF NOT EXISTS email TEXT;`;
   await sql`ALTER TABLE family_members ADD COLUMN IF NOT EXISTS notes TEXT;`;

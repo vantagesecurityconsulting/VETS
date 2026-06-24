@@ -14,6 +14,7 @@ export interface CashRow {
   donor: string | null;
   notes: string | null;
   recordedBy: string | null;
+  taxReceiptNeeded: boolean;
 }
 export interface DonorOption {
   id: number;
@@ -41,6 +42,7 @@ export default function CashManager({
   const [error, setError] = useState("");
   const [method, setMethod] = useState("Cash");
   const [donorChoice, setDonorChoice] = useState("");
+  const [taxReceipt, setTaxReceipt] = useState(false);
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -51,6 +53,7 @@ export default function CashManager({
     setShowAdd(false);
     setMethod("Cash");
     setDonorChoice("");
+    setTaxReceipt(false);
     router.refresh();
   };
   const del = (id: number) => {
@@ -142,6 +145,30 @@ export default function CashManager({
             <input name="notes" className="input" />
           </div>
           <div className="sm:col-span-2">
+            <label className="flex items-center gap-2 rounded-lg border border-gold/40 bg-gold/10 px-3 py-2.5">
+              <input
+                type="checkbox"
+                name="taxReceipt"
+                checked={taxReceipt}
+                onChange={(e) => setTaxReceipt(e.target.checked)}
+                className="h-5 w-5"
+              />
+              <span className="text-sm font-semibold text-navy">Tax receipt needed</span>
+            </label>
+          </div>
+          {taxReceipt && (
+            <>
+              <div className="sm:col-span-2">
+                <label className="label">Receipt contact (name / phone / email)</label>
+                <input name="receiptContact" className="input" placeholder="For the receipt" />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="label">Mailing address (for the receipt)</label>
+                <input name="receiptAddress" className="input" placeholder="Street, City, Province, Postal Code" />
+              </div>
+            </>
+          )}
+          <div className="sm:col-span-2">
             <button className="btn-primary w-full">Save Donation</button>
           </div>
         </form>
@@ -174,9 +201,24 @@ export default function CashManager({
                 <td className="px-3 py-2 font-semibold text-navy">{money(c.amount)}</td>
                 <td className="px-3 py-2">{c.donor ?? "Anonymous"}</td>
                 <td className="px-3 py-2 text-charcoal/60">{c.notes ?? "—"}</td>
-                <td className="px-3 py-2 text-charcoal/60">{c.recordedBy ?? "—"}</td>
+                <td className="px-3 py-2 text-charcoal/60">
+                  {c.recordedBy ?? "—"}
+                  {c.taxReceiptNeeded && (
+                    <span className="ml-1 rounded-full bg-gold/20 px-1.5 py-0.5 text-[10px] font-bold text-gold">
+                      receipt
+                    </span>
+                  )}
+                </td>
                 <td className="px-3 py-2 text-right">
-                  <button onClick={() => del(c.id)} className="rounded px-2 py-1 text-xs font-semibold text-military">Delete</button>
+                  <div className="flex justify-end gap-2">
+                    <Link
+                      href={`/dashboard/admin/donors/cash/${c.id}/receipt`}
+                      className="rounded px-2 py-1 text-xs font-semibold text-navy"
+                    >
+                      🧾 Receipt
+                    </Link>
+                    <button onClick={() => del(c.id)} className="rounded px-2 py-1 text-xs font-semibold text-military">Delete</button>
+                  </div>
                 </td>
               </tr>
             ))}
