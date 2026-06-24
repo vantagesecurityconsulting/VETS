@@ -21,6 +21,8 @@ import {
   expensesReport,
   expenseTotal,
   donationsByDonorReport,
+  giftCardsGivenReport,
+  giftCardsGivenTotal,
 } from "@/lib/reports";
 import { WEIGHT_UNIT } from "@/lib/units";
 import ReportControls from "./ReportControls";
@@ -308,6 +310,34 @@ export default async function ReportsPage({
             { key: "weight", label: "Weight", format: fmtWeight },
           ]}
         />
+      );
+      break;
+    }
+    case "gift-cards": {
+      const [rows, total] = await Promise.all([
+        giftCardsGivenReport(range),
+        giftCardsGivenTotal(range),
+      ]);
+      content = (
+        <>
+          <div className="mt-4 rounded-xl border border-gold/30 bg-gold/10 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-charcoal/60">
+              Total gift cards given ({range.label})
+            </p>
+            <p className="text-3xl font-bold text-navy">{fmtMoney(total)}</p>
+          </div>
+          <Table
+            rows={rows}
+            columns={[
+              { key: "created_at", label: "Date", format: fmtDate },
+              { key: "client_name", label: "Client" },
+              { key: "client_id", label: "Client ID" },
+              { key: "store", label: "Store" },
+              { key: "amount", label: "Amount", format: fmtMoney },
+              { key: "volunteer", label: "By" },
+            ]}
+          />
+        </>
       );
       break;
     }

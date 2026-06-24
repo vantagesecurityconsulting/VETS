@@ -7,6 +7,7 @@ import {
   confirmVisitAction,
   getClientMonthStatusAction,
   type VisitLineInput,
+  type GiftCardInput,
 } from "./actions";
 
 type Step = "search" | "build" | "done";
@@ -26,13 +27,22 @@ export default function VisitFlow({
   // cart: itemId -> quantity
   const [cart, setCart] = useState<Record<number, number>>({});
   const [notes, setNotes] = useState("");
+  const [giftCards, setGiftCards] = useState<{ store: string; amount: string }[]>([]);
   const [itemSearch, setItemSearch] = useState("");
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState("");
   const [summary, setSummary] = useState<{
     pointsUsed: number;
     lines: { name: string; qty: number; points: number }[];
+    giftCards: { store: string; amount: number }[];
   } | null>(null);
+
+  const addGiftCard = () =>
+    setGiftCards((g) => [...g, { store: "", amount: "" }]);
+  const updateGiftCard = (i: number, patch: Partial<{ store: string; amount: string }>) =>
+    setGiftCards((g) => g.map((c, idx) => (idx === i ? { ...c, ...patch } : c)));
+  const removeGiftCard = (i: number) =>
+    setGiftCards((g) => g.filter((_, idx) => idx !== i));
 
   // Map itemId -> { name, pointValue, quantity, categoryName }
   const itemIndex = useMemo(() => {
@@ -105,7 +115,10 @@ export default function VisitFlow({
       itemId: Number(id),
       quantity: qty,
     }));
-    const res = await confirmVisitAction(client.id, lines, notes);
+    const cards: GiftCardInput[] = giftCards
+      .filter((g) => g.store.trim() !== "" || Number(g.amount) > 0)
+      .map((g) => ({ store: g.store.trim(), amount: Number(g.amount) || 0 }));
+    const res = await confirmVisitAction(client.id, lines, notes, cards);
     if (!res.success) {
       setError(res.error || "Could not save visit.");
       setConfirming(false);
@@ -121,6 +134,7 @@ export default function VisitFlow({
           points: (info?.pointValue ?? 0) * l.quantity,
         };
       }),
+      giftCards: cards,
     });
     setStep("done");
     setConfirming(false);
@@ -133,6 +147,7 @@ export default function VisitFlow({
     setClient(null);
     setCart({});
     setNotes("");
+    setGiftCards([]);
     setItemSearch("");
     setSummary(null);
     setError("");
@@ -223,6 +238,19 @@ export default function VisitFlow({
             <span className="font-semibold">Total points used</span>
             <span className="font-bold text-navy">{summary.pointsUsed}</span>
           </div>
+          {summary.giftCards.length > 0 && (
+            <div className="mt-3 border-t border-black/10 pt-3">
+              <p className="text-sm font-semibold text-navy">Gift cards given</p>
+              {summary.giftCards.map((g, i) => (
+                <div key={i} className="flex justify-between py-1 text-sm">
+                  <span>{g.store || "Gift card"}</span>
+                  <span className="font-semibold text-navy">
+                    {g.amount.toLocaleString("en-CA", { style: "currency", currency: "CAD" })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
           <button onClick={reset} className="btn-primary mt-6 w-full">
             New Visit
           </button>
@@ -331,6 +359,54 @@ export default function VisitFlow({
           </div>
         ))}
 
+        {/* Gift cards given */}
+        <div className="card">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="font-heading text-lg font-bold text-navy">
+              Gift Cards Given
+            </h2>
+            <button onClick={addGiftCard} className="btn-outline text-sm">
+              + Add Gift Card
+            </button>
+          </div>
+          {giftCards.length === 0 ? (
+            <p className="text-sm text-charcoal/50">
+              None. Add one if a gift card was given to this client.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {giftCards.map((g, i) => (
+                <div key={i} className="flex flex-wrap items-center gap-2">
+                  <input
+                    className="input flex-1 min-w-[10rem]"
+                    placeholder="Store (e.g. Superstore, Walmart)"
+                    value={g.store}
+                    onChange={(e) => updateGiftCard(i, { store: e.target.value })}
+                  />
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm text-charcoal/50">$</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      className="input w-28"
+                      placeholder="Amount"
+                      value={g.amount}
+                      onChange={(e) => updateGiftCard(i, { amount: e.target.value })}
+                    />
+                  </div>
+                  <button
+                    onClick={() => removeGiftCard(i)}
+                    className="rounded px-2 py-1 text-sm font-semibold text-military"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="card">
           <label className="label" htmlFor="notes">
             Notes (optional)
@@ -377,7 +453,11 @@ export default function VisitFlow({
           </div>
           <button
             onClick={confirm}
-            disabled={confirming || pointsUsed === 0}
+            disabled={
+              confirming ||
+              (pointsUsed === 0 &&
+                !giftCards.some((g) => g.store.trim() !== "" || Number(g.amount) > 0))
+            }
             className={overBudget ? "btn-danger" : "btn-primary"}
           >
             {confirming

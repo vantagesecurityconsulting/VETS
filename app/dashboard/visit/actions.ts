@@ -40,6 +40,11 @@ export interface VisitLineInput {
   quantity: number;
 }
 
+export interface GiftCardInput {
+  store: string;
+  amount: number;
+}
+
 export interface ConfirmVisitResult {
   success: boolean;
   error?: string;
@@ -50,12 +55,14 @@ export interface ConfirmVisitResult {
 export async function confirmVisitAction(
   clientId: number,
   lines: VisitLineInput[],
-  notes: string
+  notes: string,
+  giftCards: GiftCardInput[] = []
 ): Promise<ConfirmVisitResult> {
   const session = await requireAuth();
 
   const cleanLines = lines.filter((l) => l.quantity > 0);
-  if (cleanLines.length === 0) {
+  const cleanCards = giftCards.filter((g) => g.amount > 0 || g.store.trim() !== "");
+  if (cleanLines.length === 0 && cleanCards.length === 0) {
     return { success: false, error: "No items selected." };
   }
 
@@ -96,6 +103,14 @@ export async function confirmVisitAction(
       SET quantity = GREATEST(0, quantity - ${l.quantity}),
           last_updated = now()
       WHERE item_id = ${l.itemId};
+    `;
+  }
+
+  // Record any gift cards given to the client on this visit.
+  for (const g of cleanCards) {
+    await sql`
+      INSERT INTO visit_gift_cards (transaction_id, store, amount)
+      VALUES (${transactionId}, ${g.store.trim() || null}, ${Math.max(0, g.amount || 0)});
     `;
   }
 

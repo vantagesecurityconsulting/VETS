@@ -105,6 +105,20 @@ async function buildExport(type: string): Promise<Export | null> {
         rows: rows.map((r) => [String(r.donation_date), r.method, Number(r.amount).toFixed(2), r.gift_card_store, r.donor || "Anonymous", r.notes, r.recorded_by]),
       };
     }
+    case "gift_cards": {
+      const { rows } = await sql`
+        SELECT t.created_at, cl.name AS client, cl.client_id, g.store, g.amount, u.name AS volunteer
+        FROM visit_gift_cards g
+        JOIN transactions t ON t.id = g.transaction_id
+        LEFT JOIN clients cl ON cl.id = t.client_id
+        LEFT JOIN users u ON u.id = t.volunteer_id
+        ORDER BY t.created_at DESC;
+      `;
+      return {
+        headers: ["Date", "Client", "Client ID", "Store", "Amount", "Given By"],
+        rows: rows.map((r) => [new Date(r.created_at).toISOString(), r.client, r.client_id, r.store, Number(r.amount).toFixed(2), r.volunteer]),
+      };
+    }
     case "expenses": {
       const { rows } = await sql`
         SELECT e.expense_date, e.category, e.description, e.vendor, e.amount, u.name AS entered_by

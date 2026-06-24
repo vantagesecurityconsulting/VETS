@@ -260,6 +260,33 @@ export async function donationsByDonorReport(range: DateRange) {
   return rows;
 }
 
+// Gift cards given to clients during visits.
+export async function giftCardsGivenReport(range: DateRange) {
+  const { start, end } = bounds(range);
+  const { rows } = await sql`
+    SELECT t.created_at, cl.name AS client_name, cl.client_id,
+           u.name AS volunteer, g.store, g.amount
+    FROM visit_gift_cards g
+    JOIN transactions t ON t.id = g.transaction_id
+    LEFT JOIN clients cl ON cl.id = t.client_id
+    LEFT JOIN users u ON u.id = t.volunteer_id
+    WHERE t.created_at BETWEEN ${start} AND ${end}
+    ORDER BY t.created_at DESC;
+  `;
+  return rows;
+}
+
+export async function giftCardsGivenTotal(range: DateRange): Promise<number> {
+  const { start, end } = bounds(range);
+  const { rows } = await sql`
+    SELECT COALESCE(ROUND(SUM(g.amount), 2), 0) AS total
+    FROM visit_gift_cards g
+    JOIN transactions t ON t.id = g.transaction_id
+    WHERE t.created_at BETWEEN ${start} AND ${end};
+  `;
+  return Number(rows[0]?.total ?? 0);
+}
+
 // Write-off / waste report
 export async function wasteReport(range: DateRange) {
   const { start, end } = bounds(range);
