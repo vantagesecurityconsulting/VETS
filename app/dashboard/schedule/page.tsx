@@ -1,6 +1,7 @@
 import { requireAuth } from "@/lib/auth";
 import { sql } from "@/lib/db";
-import ScheduleCalendar, { type Appt } from "./ScheduleCalendar";
+import ScheduleCalendar, { type Appt, type Shift } from "./ScheduleCalendar";
+import type { StaffOption } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -44,5 +45,35 @@ export default async function SchedulePage({
     notes: r.notes,
   }));
 
-  return <ScheduleCalendar weekStart={iso(start)} appts={appts} />;
+  const { rows: shiftRows } = await sql`
+    SELECT s.id, s.shift_date, s.start_time, s.end_time, s.role,
+           u.name AS staff_name, u.role AS staff_role
+    FROM shifts s
+    LEFT JOIN users u ON u.id = s.user_id
+    WHERE s.shift_date BETWEEN ${iso(start)}::date AND ${iso(end)}::date
+    ORDER BY s.shift_date, s.start_time NULLS LAST, s.id;
+  `;
+  const shifts: Shift[] = shiftRows.map((r) => ({
+    id: r.id,
+    date: iso(new Date(r.shift_date)),
+    start: r.start_time,
+    end: r.end_time,
+    role: r.role,
+    name: r.staff_name || "(removed)",
+    staffRole: r.staff_role || "",
+  }));
+
+  const { rows: staffRows } = await sql`
+    SELECT id, name, role FROM users WHERE is_active = true ORDER BY role, name;
+  `;
+  const staff: StaffOption[] = staffRows.map((r) => ({ id: r.id, name: r.name, role: r.role }));
+
+  return (
+    <ScheduleCalendar
+      weekStart={iso(start)}
+      appts={appts}
+      shifts={shifts}
+      staff={staff}
+    />
+  );
 }

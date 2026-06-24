@@ -64,3 +64,44 @@ export async function deleteAppointmentAction(id: number): Promise<ActionResult>
   revalidatePath("/dashboard/schedule");
   return { success: true };
 }
+
+// ------------------------------ Staff shifts ------------------------------
+
+export interface StaffOption {
+  id: number;
+  name: string;
+  role: string;
+}
+
+export async function getStaffAction(): Promise<StaffOption[]> {
+  await requireAuth();
+  const { rows } = await sql`
+    SELECT id, name, role FROM users WHERE is_active = true ORDER BY role, name;
+  `;
+  return rows.map((r) => ({ id: r.id, name: r.name, role: r.role }));
+}
+
+export async function bookShiftAction(formData: FormData): Promise<ActionResult> {
+  const session = await requireAuth();
+  const userId = Number(formData.get("userId"));
+  const date = String(formData.get("date") || "").trim();
+  const start = String(formData.get("start") || "").trim();
+  const end = String(formData.get("end") || "").trim();
+  const role = String(formData.get("role") || "").trim();
+  if (!userId) return { success: false, error: "Choose a volunteer or manager." };
+  if (!date) return { success: false, error: "Please choose a date." };
+
+  await sql`
+    INSERT INTO shifts (user_id, shift_date, start_time, end_time, role, created_by)
+    VALUES (${userId}, ${date}::date, ${start || null}, ${end || null}, ${role || null}, ${session.userId});
+  `;
+  revalidatePath("/dashboard/schedule");
+  return { success: true };
+}
+
+export async function deleteShiftAction(id: number): Promise<ActionResult> {
+  await requireAuth();
+  await sql`DELETE FROM shifts WHERE id = ${id};`;
+  revalidatePath("/dashboard/schedule");
+  return { success: true };
+}

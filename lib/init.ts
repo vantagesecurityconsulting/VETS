@@ -190,6 +190,18 @@ export async function createTables(): Promise<void> {
     );
   `;
   await sql`
+    CREATE TABLE IF NOT EXISTS shifts (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      shift_date DATE NOT NULL,
+      start_time TEXT,
+      end_time TEXT,
+      role TEXT,
+      created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `;
+  await sql`
     CREATE TABLE IF NOT EXISTS expenses (
       id SERIAL PRIMARY KEY,
       expense_date DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -210,6 +222,7 @@ export async function createTables(): Promise<void> {
   await sql`CREATE INDEX IF NOT EXISTS idx_item_prices_item ON item_prices(item_id);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(expense_date);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(appt_date);`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_shifts_date ON shifts(shift_date);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);`;
 }
