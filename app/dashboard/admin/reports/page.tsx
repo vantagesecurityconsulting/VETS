@@ -17,6 +17,7 @@ import {
   distributedWeightTotal,
   wasteReport,
   mostNeededReport,
+  shoppingListReport,
   clientActivityReport,
   expensesReport,
   expenseTotal,
@@ -26,6 +27,7 @@ import {
 } from "@/lib/reports";
 import { WEIGHT_UNIT } from "@/lib/units";
 import ReportControls from "./ReportControls";
+import PrintButton from "@/components/PrintButton";
 
 export const dynamic = "force-dynamic";
 
@@ -234,6 +236,120 @@ export default async function ReportsPage({
               { key: "given_30d", label: "Given (30d)" },
             ]}
           />
+        </>
+      );
+      break;
+    }
+    case "shopping-list": {
+      const list = await shoppingListReport();
+      content = (
+        <>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
+            <p className="text-sm text-charcoal/60">
+              Low / out-of-stock items, each matched to the{" "}
+              <span className="font-semibold">cheapest store</span> from your
+              recorded prices and grouped into one list per store. Items without
+              a recorded price are listed separately.
+            </p>
+            <PrintButton />
+          </div>
+          <div className="mt-3 rounded-xl border border-gold/30 bg-gold/10 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-charcoal/60">
+              Estimated total to restock everything (cheapest stores)
+            </p>
+            <p className="text-3xl font-bold text-navy">{fmtMoney(list.total)}</p>
+          </div>
+          {list.groups.length === 0 && list.unpriced.length === 0 ? (
+            <p className="mt-6 text-sm text-charcoal/50">
+              Nothing is low on stock right now. 👍
+            </p>
+          ) : (
+            <div className="mt-4 space-y-5">
+              {list.groups.map((g) => (
+                <div
+                  key={g.store}
+                  className="overflow-hidden rounded-xl border border-black/5 bg-white shadow-sm"
+                >
+                  <div className="flex items-center justify-between bg-navy px-4 py-2 text-white">
+                    <p className="font-heading text-base font-bold">🛒 {g.store}</p>
+                    <p className="text-sm">
+                      {g.items.length} item{g.items.length === 1 ? "" : "s"} ·{" "}
+                      <span className="font-bold">{fmtMoney(g.subtotal)}</span>
+                    </p>
+                  </div>
+                  <table className="w-full text-sm">
+                    <thead className="bg-navy/5 text-left text-navy">
+                      <tr>
+                        <th className="px-3 py-2">Item</th>
+                        <th className="px-3 py-2">Category</th>
+                        <th className="px-3 py-2">In Stock</th>
+                        <th className="px-3 py-2">Given (30d)</th>
+                        <th className="px-3 py-2">Cheapest Price</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {g.items.map((it, i) => (
+                        <tr key={i} className="border-t border-black/5">
+                          <td className="px-3 py-2 font-medium">{it.itemName}</td>
+                          <td className="px-3 py-2 text-charcoal/60">{it.categoryName}</td>
+                          <td className="px-3 py-2">
+                            {it.quantity === 0 ? (
+                              <span className="font-bold text-military">Out</span>
+                            ) : (
+                              it.quantity
+                            )}
+                          </td>
+                          <td className="px-3 py-2">{it.given30d}</td>
+                          <td className="px-3 py-2">{fmtMoney(it.cheapestPrice)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
+
+              {list.unpriced.length > 0 && (
+                <div className="overflow-hidden rounded-xl border border-black/5 bg-white shadow-sm">
+                  <div className="bg-charcoal/80 px-4 py-2 text-white">
+                    <p className="font-heading text-base font-bold">
+                      No price recorded yet
+                    </p>
+                  </div>
+                  <table className="w-full text-sm">
+                    <thead className="bg-navy/5 text-left text-navy">
+                      <tr>
+                        <th className="px-3 py-2">Item</th>
+                        <th className="px-3 py-2">Category</th>
+                        <th className="px-3 py-2">In Stock</th>
+                        <th className="px-3 py-2">Given (30d)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {list.unpriced.map((it, i) => (
+                        <tr key={i} className="border-t border-black/5">
+                          <td className="px-3 py-2 font-medium">{it.itemName}</td>
+                          <td className="px-3 py-2 text-charcoal/60">{it.categoryName}</td>
+                          <td className="px-3 py-2">
+                            {it.quantity === 0 ? (
+                              <span className="font-bold text-military">Out</span>
+                            ) : (
+                              it.quantity
+                            )}
+                          </td>
+                          <td className="px-3 py-2">{it.given30d}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <p className="px-4 py-2 text-xs text-charcoal/50">
+                    Add prices for these under{" "}
+                    <span className="font-semibold">Items &amp; Categories</span>{" "}
+                    so they can be sorted to the cheapest store.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </>
       );
       break;

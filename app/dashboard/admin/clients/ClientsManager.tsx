@@ -37,12 +37,15 @@ export interface ClientRow {
   email: string | null;
   serviceNumber: string | null;
   notes: string | null;
+  hasAllergy: boolean;
+  allergyInfo: string | null;
   deliveryApproved: boolean;
   hasPortalPin: boolean;
 }
 
 /** Shared detail inputs for the head of household (used in add & edit forms). */
 function ClientDetailFields({ c }: { c?: ClientRow }) {
+  const [hasAllergy, setHasAllergy] = useState(c?.hasAllergy ?? false);
   return (
     <>
       <div>
@@ -70,8 +73,34 @@ function ClientDetailFields({ c }: { c?: ClientRow }) {
         <input name="address" defaultValue={c?.address ?? ""} className="input" />
       </div>
       <div className="sm:col-span-2">
-        <label className="label">Allergies / Important Notes</label>
+        <label className="label">Important Notes</label>
         <input name="notes" defaultValue={c?.notes ?? ""} className="input" />
+      </div>
+      <div className="sm:col-span-2">
+        <label className="flex items-center gap-2 rounded-lg border border-military/40 bg-military/5 px-3 py-2.5">
+          <input
+            type="checkbox"
+            name="hasAllergy"
+            checked={hasAllergy}
+            onChange={(e) => setHasAllergy(e.target.checked)}
+            className="h-5 w-5"
+          />
+          <span className="text-sm font-semibold text-military">
+            ⚠ Allergy / food sensitivity
+            <span className="block text-xs font-normal text-charcoal/60">
+              Flags this client on the schedule so staff are warned at their
+              appointment.
+            </span>
+          </span>
+        </label>
+        {hasAllergy && (
+          <input
+            name="allergyInfo"
+            defaultValue={c?.allergyInfo ?? ""}
+            className="input mt-2"
+            placeholder="What is the allergy / sensitivity? (e.g. peanuts, gluten, shellfish)"
+          />
+        )}
       </div>
       <div className="sm:col-span-2">
         <label className="flex items-center gap-2 rounded-lg border border-gold/40 bg-gold/10 px-3 py-2.5">
@@ -398,6 +427,11 @@ export default function ClientsManager({
                           🚚 Delivery
                         </span>
                       )}
+                      {c.hasAllergy && (
+                        <span className="ml-2 rounded-full bg-military/15 px-2 py-0.5 text-xs font-bold text-military">
+                          ⚠ Allergy
+                        </span>
+                      )}
                     </p>
                     <p className="text-sm text-charcoal/60">
                       {c.clientId} · Family of {c.familySize} · {c.pointBudget} credits
@@ -419,8 +453,13 @@ export default function ClientsManager({
                     {c.address && (
                       <p className="text-xs text-charcoal/50">{c.address}</p>
                     )}
+                    {c.hasAllergy && (
+                      <p className="mt-0.5 text-xs font-semibold text-military">
+                        ⚠ Allergy{c.allergyInfo ? `: ${c.allergyInfo}` : ""}
+                      </p>
+                    )}
                     {c.notes && (
-                      <p className="mt-0.5 text-xs font-semibold text-military">⚠ {c.notes}</p>
+                      <p className="mt-0.5 text-xs font-semibold text-charcoal/60">{c.notes}</p>
                     )}
                     {!c.isActive && c.archiveReason && (
                       <p className="mt-1 text-xs italic text-charcoal/50">

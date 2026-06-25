@@ -27,6 +27,10 @@ function detailFields(formData: FormData) {
     email: get("email"),
     serviceNumber: get("serviceNumber"),
     notes: get("notes"),
+    hasAllergy:
+      formData.get("hasAllergy") === "on" ||
+      formData.get("hasAllergy") === "true",
+    allergyInfo: get("allergyInfo"),
     deliveryApproved:
       formData.get("deliveryApproved") === "on" ||
       formData.get("deliveryApproved") === "true",
@@ -63,11 +67,13 @@ export async function createClientAction(
   await sql`
     INSERT INTO clients
       (client_id, name, family_size, point_budget, date_of_birth, gender,
-       address, contact, email, service_number, notes, delivery_approved, portal_pin, is_active)
+       address, contact, email, service_number, notes, has_allergy, allergy_info,
+       delivery_approved, portal_pin, is_active)
     VALUES (
       ${clientId}, ${name}, ${familySize}, ${pointBudget}, ${d.dob}::date,
       ${d.gender}, ${d.address}, ${d.contact}, ${d.email}, ${d.serviceNumber},
-      ${d.notes}, ${d.deliveryApproved}, ${portalPin}, true
+      ${d.notes}, ${d.hasAllergy}, ${d.allergyInfo},
+      ${d.deliveryApproved}, ${portalPin}, true
     );
   `;
   revalidatePath("/dashboard/admin/clients");
@@ -93,7 +99,8 @@ export async function updateClientAction(
     SET name = ${name}, family_size = ${familySize}, point_budget = ${pointBudget},
         date_of_birth = ${d.dob}::date, gender = ${d.gender}, address = ${d.address},
         contact = ${d.contact}, email = ${d.email}, service_number = ${d.serviceNumber},
-        notes = ${d.notes}, delivery_approved = ${d.deliveryApproved}
+        notes = ${d.notes}, has_allergy = ${d.hasAllergy}, allergy_info = ${d.allergyInfo},
+        delivery_approved = ${d.deliveryApproved}
     WHERE id = ${id};
   `;
 

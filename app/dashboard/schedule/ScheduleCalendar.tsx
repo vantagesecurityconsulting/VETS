@@ -20,6 +20,8 @@ export interface Appt {
   name: string;
   status: "scheduled" | "completed" | "cancelled" | "no_show";
   notes: string | null;
+  hasAllergy: boolean;
+  allergyInfo: string | null;
 }
 
 export interface Shift {
@@ -28,6 +30,17 @@ export interface Shift {
   start: string | null;
   end: string | null;
   role: string | null;
+  name: string;
+  staffRole: string;
+}
+
+export interface Availability {
+  id: number;
+  date: string;
+  status: "available" | "unavailable";
+  start: string | null;
+  end: string | null;
+  note: string | null;
   name: string;
   staffRole: string;
 }
@@ -55,11 +68,13 @@ export default function ScheduleCalendar({
   weekStart,
   appts,
   shifts,
+  availability,
   staff,
 }: {
   weekStart: string;
   appts: Appt[];
   shifts: Shift[];
+  availability: Availability[];
   staff: StaffOption[];
 }) {
   const router = useRouter();
@@ -153,7 +168,16 @@ export default function ScheduleCalendar({
 
       <p className="mt-2 text-xs text-charcoal/50">
         <span className="mr-3"><span className="inline-block h-2 w-2 rounded-full bg-navy/40" /> Client appointment</span>
-        <span><span className="inline-block h-2 w-2 rounded-full bg-gold" /> Staff shift</span>
+        <span className="mr-3"><span className="inline-block h-2 w-2 rounded-full bg-gold" /> Staff shift</span>
+        <span className="mr-3"><span className="inline-block h-2 w-2 rounded-full bg-green-600" /> Available</span>
+        <span><span className="inline-block h-2 w-2 rounded-full bg-military" /> Not free</span>
+      </p>
+      <p className="mt-1 text-xs text-charcoal/50">
+        Team availability comes from each person&apos;s{" "}
+        <a href="/dashboard/availability" className="font-semibold text-navy underline">
+          My Availability
+        </a>{" "}
+        calendar.
       </p>
 
       {error && (
@@ -255,6 +279,7 @@ export default function ScheduleCalendar({
         {days.map((d) => {
           const dayAppts = appts.filter((a) => a.date === d);
           const dayShifts = shifts.filter((s) => s.date === d);
+          const dayAvail = availability.filter((a) => a.date === d);
           const isToday = d === new Date().toISOString().slice(0, 10);
           return (
             <div key={d} className={`rounded-xl border bg-white p-2 shadow-sm ${isToday ? "border-gold" : "border-black/5"}`}>
@@ -272,9 +297,39 @@ export default function ScheduleCalendar({
               </div>
 
               <div className="space-y-1.5">
-                {dayAppts.length === 0 && dayShifts.length === 0 && (
-                  <p className="text-xs text-charcoal/30">—</p>
-                )}
+                {dayAppts.length === 0 &&
+                  dayShifts.length === 0 &&
+                  dayAvail.length === 0 && (
+                    <p className="text-xs text-charcoal/30">—</p>
+                  )}
+
+                {/* Team availability */}
+                {dayAvail.map((a) => (
+                  <div
+                    key={`av${a.id}`}
+                    className={`rounded-md border p-1.5 text-xs ${
+                      a.status === "unavailable"
+                        ? "border-military/30 bg-military/5"
+                        : "border-green-600/30 bg-green-50"
+                    }`}
+                  >
+                    <span
+                      className={`font-semibold ${
+                        a.status === "unavailable" ? "text-military" : "text-green-700"
+                      }`}
+                    >
+                      {a.status === "unavailable" ? "✕" : "✓"} {a.name}
+                    </span>
+                    <p className="text-[11px] text-charcoal/60">
+                      {[
+                        a.start && a.end ? `${a.start}–${a.end}` : a.start || "all day",
+                        a.note,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  </div>
+                ))}
 
                 {/* Staff shifts */}
                 {dayShifts.map((s) => (
@@ -293,12 +348,24 @@ export default function ScheduleCalendar({
 
                 {/* Client appointments */}
                 {dayAppts.map((a) => (
-                  <div key={`a${a.id}`} className="rounded-md border border-black/5 bg-offwhite p-1.5 text-xs">
+                  <div
+                    key={`a${a.id}`}
+                    className={`rounded-md border p-1.5 text-xs ${
+                      a.hasAllergy
+                        ? "border-military/40 bg-military/5"
+                        : "border-black/5 bg-offwhite"
+                    }`}
+                  >
                     <div className="flex items-center justify-between gap-1">
                       <span className="font-semibold text-charcoal">
                         {a.time ? `${a.time} · ` : ""}{a.name}
                       </span>
                     </div>
+                    {a.hasAllergy && (
+                      <p className="mt-0.5 rounded bg-military/15 px-1 py-0.5 text-[10px] font-bold text-military">
+                        ⚠ Allergy{a.allergyInfo ? `: ${a.allergyInfo}` : ""}
+                      </p>
+                    )}
                     {a.notes && <p className="text-[11px] text-charcoal/50">{a.notes}</p>}
                     <span className={`mt-1 inline-block rounded-full px-1.5 py-0.5 text-[10px] font-bold ${STATUS_CLASS[a.status]}`}>
                       {STATUS_LABEL[a.status]}

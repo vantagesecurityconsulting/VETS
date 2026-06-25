@@ -86,6 +86,8 @@ export async function createTables(): Promise<void> {
       email TEXT,
       service_number TEXT,
       notes TEXT,
+      has_allergy BOOLEAN NOT NULL DEFAULT false,
+      allergy_info TEXT,
       delivery_approved BOOLEAN NOT NULL DEFAULT false,
       portal_pin TEXT,
       is_active BOOLEAN NOT NULL DEFAULT true,
@@ -240,6 +242,19 @@ export async function createTables(): Promise<void> {
     );
   `;
   await sql`
+    CREATE TABLE IF NOT EXISTS availability (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      avail_date DATE NOT NULL,
+      status TEXT NOT NULL DEFAULT 'available'
+        CHECK (status IN ('available', 'unavailable')),
+      start_time TEXT,
+      end_time TEXT,
+      note TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `;
+  await sql`
     CREATE TABLE IF NOT EXISTS holiday_baskets (
       id SERIAL PRIMARY KEY,
       client_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
@@ -267,6 +282,8 @@ export async function createTables(): Promise<void> {
   await sql`CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_holiday_baskets_client ON holiday_baskets(client_id);`;
   await sql`CREATE INDEX IF NOT EXISTS idx_holiday_baskets_holiday ON holiday_baskets(holiday, year);`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_availability_date ON availability(avail_date);`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_availability_user ON availability(user_id);`;
 }
 
 /**
@@ -389,6 +406,9 @@ export async function runMigrations(): Promise<void> {
   await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS notes TEXT;`;
   await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS delivery_approved BOOLEAN NOT NULL DEFAULT false;`;
   await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS portal_pin TEXT;`;
+  // Allergy / food sensitivity flag (surfaces on the schedule).
+  await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS has_allergy BOOLEAN NOT NULL DEFAULT false;`;
+  await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS allergy_info TEXT;`;
   await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS donor_id INTEGER REFERENCES donors(id) ON DELETE SET NULL;`;
   // Index after the column exists (must follow the ADD COLUMN above).
   await sql`CREATE INDEX IF NOT EXISTS idx_transactions_donor ON transactions(donor_id);`;

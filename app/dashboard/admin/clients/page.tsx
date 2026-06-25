@@ -9,7 +9,8 @@ export default async function ClientsPage() {
   const { rows } = await sql`
     SELECT c.id, c.client_id, c.name, c.family_size, c.point_budget, c.is_active,
            c.archive_reason, c.date_of_birth, c.gender, c.address, c.contact,
-           c.email, c.service_number, c.notes, c.delivery_approved,
+           c.email, c.service_number, c.notes, c.has_allergy, c.allergy_info,
+           c.delivery_approved,
            (c.portal_pin IS NOT NULL) AS has_portal_pin,
            (SELECT COUNT(*)::int FROM family_members fm WHERE fm.client_id = c.id) AS member_count
     FROM clients c
@@ -31,6 +32,8 @@ export default async function ClientsPage() {
     email: r.email,
     serviceNumber: r.service_number,
     notes: r.notes,
+    hasAllergy: r.has_allergy,
+    allergyInfo: r.allergy_info,
     deliveryApproved: r.delivery_approved,
     hasPortalPin: r.has_portal_pin,
   }));

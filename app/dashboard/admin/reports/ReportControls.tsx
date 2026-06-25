@@ -16,6 +16,7 @@ const REPORTS = [
   { key: "gift-cards", label: "Gift Cards Given" },
   { key: "waste", label: "Write-Offs" },
   { key: "most-needed", label: "Most Needed" },
+  { key: "shopping-list", label: "Shopping List by Store" },
   { key: "client-activity", label: "Client Activity" },
   { key: "expenses", label: "Expenses" },
 ];

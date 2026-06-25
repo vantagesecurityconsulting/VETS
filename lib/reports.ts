@@ -174,6 +174,96 @@ export async function mostNeededReport(lowThreshold = 5) {
   return rows;
 }
 
+// Shopping list: low / out-of-stock items, each matched to the cheapest store
+// from the prices we've recorded. Grouped by store for an efficient shopping run.
+export interface ShoppingItem {
+  itemName: string;
+  categoryName: string;
+  quantity: number;
+  given30d: number;
+  cheapestStore: string | null;
+  cheapestPrice: number | null;
+}
+export interface ShoppingStoreGroup {
+  store: string;
+  items: ShoppingItem[];
+  subtotal: number;
+}
+export interface ShoppingList {
+  groups: ShoppingStoreGroup[];
+  unpriced: ShoppingItem[];
+  total: number;
+}
+
+export async function shoppingListReport(
+  lowThreshold = 5
+): Promise<ShoppingList> {
+  const { rows } = await sql`
+    SELECT
+      i.name AS item_name,
+      c.name AS category_name,
+      COALESCE(inv.quantity, 0) AS quantity,
+      COALESCE(d.given, 0)::int AS given_30d,
+      cp.store AS cheapest_store,
+      cp.price AS cheapest_price
+    FROM items i
+    JOIN categories c ON c.id = i.category_id
+    LEFT JOIN inventory inv ON inv.item_id = i.id
+    LEFT JOIN (
+      SELECT ti.item_id, SUM(ti.quantity) AS given
+      FROM transaction_items ti
+      JOIN transactions t ON t.id = ti.transaction_id
+      WHERE t.type = 'stock_out' AND t.created_at >= now() - interval '30 days'
+      GROUP BY ti.item_id
+    ) d ON d.item_id = i.id
+    LEFT JOIN LATERAL (
+      SELECT store, price
+      FROM item_prices ip
+      WHERE ip.item_id = i.id
+      ORDER BY price ASC, store ASC
+      LIMIT 1
+    ) cp ON true
+    WHERE i.is_active = true
+      AND COALESCE(inv.quantity, 0) <= ${lowThreshold}
+    ORDER BY cp.store NULLS LAST, COALESCE(d.given, 0) DESC, c.name, i.name;
+  `;
+
+  const byStore = new Map<string, ShoppingItem[]>();
+  const unpriced: ShoppingItem[] = [];
+
+  for (const r of rows) {
+    const item: ShoppingItem = {
+      itemName: r.item_name,
+      categoryName: r.category_name,
+      quantity: Number(r.quantity),
+      given30d: r.given_30d,
+      cheapestStore: r.cheapest_store,
+      cheapestPrice: r.cheapest_price === null ? null : Number(r.cheapest_price),
+    };
+    if (!item.cheapestStore) {
+      unpriced.push(item);
+    } else {
+      const list = byStore.get(item.cheapestStore) ?? [];
+      list.push(item);
+      byStore.set(item.cheapestStore, list);
+    }
+  }
+
+  const groups: ShoppingStoreGroup[] = Array.from(byStore.keys())
+    .sort((a, b) => a.localeCompare(b))
+    .map((store) => {
+      const items = byStore.get(store)!;
+      const subtotal = items.reduce(
+        (sum, it) => sum + (it.cheapestPrice ?? 0),
+        0
+      );
+      return { store, items, subtotal };
+    });
+
+  const total = groups.reduce((sum, g) => sum + g.subtotal, 0);
+  return { groups, unpriced, total };
+}
+
 // Client visit frequency + inactivity. Not date-filtered (lifetime view).
 export async function clientActivityReport(inactiveDays = 60) {
   const { rows } = await sql`
