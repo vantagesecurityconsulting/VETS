@@ -13,6 +13,8 @@ const EXPORTS = [
   { type: "holiday_baskets", title: "Holiday Baskets", desc: "Holiday baskets given to clients by occasion & year" },
   { type: "expenses", title: "Expenses", desc: "Recorded spending by date and category" },
   { type: "appointments", title: "Appointments", desc: "Booked shopping appointments" },
+  { type: "shifts", title: "Staff Shifts", desc: "Scheduled volunteer & manager shifts" },
+  { type: "availability", title: "Staff Availability", desc: "When staff marked themselves free / not free" },
   { type: "volunteer_hours", title: "Volunteer Hours", desc: "Logged hours & activity notes" },
 ];
 
@@ -30,7 +32,33 @@ export default async function ExportPage() {
         backup of each.
       </p>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+      {/* Full master backup */}
+      <div className="mt-5 rounded-xl border border-navy/20 bg-navy/5 p-5 shadow-sm">
+        <h2 className="font-heading text-lg font-bold text-navy">
+          Full Master Backup (everything, one file)
+        </h2>
+        <p className="mt-1 text-sm text-charcoal/70">
+          Download <span className="font-semibold">every table at once</span> as a
+          single ZIP of CSV files — a complete hard copy you can keep off-site in
+          case the live system is ever unavailable.
+        </p>
+        <a href="/api/backup" download className="btn-primary mt-3 inline-block text-sm">
+          ⬇ Download Full Backup (.zip)
+        </a>
+        <p className="mt-3 text-sm text-charcoal/70">
+          <span className="font-semibold">Automatic hourly backups:</span> use the{" "}
+          <span className="font-semibold">💾 Backup</span> button in the
+          bottom-right corner of the screen to turn on auto-save. While the app
+          stays open on this computer, it will save a fresh full backup to your
+          Downloads folder once an hour — no clicking needed. Turn it on on the
+          one computer you want to keep the master copies on.
+        </p>
+      </div>
+
+      <h2 className="mt-6 font-heading text-lg font-bold text-navy">
+        Individual Tables
+      </h2>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
         {EXPORTS.map((e) => (
           <div
             key={e.type}

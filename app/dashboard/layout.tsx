@@ -4,6 +4,7 @@ import LogoutButton from "@/components/LogoutButton";
 import NavLink from "@/components/NavLink";
 import { APP_VERSION } from "@/lib/version";
 import { ensureInitialized } from "@/lib/init";
+import AutoBackup from "@/components/AutoBackup";
 
 export const dynamic = "force-dynamic";
 
@@ -88,6 +89,8 @@ export default async function DashboardLayout({
       )}
 
       <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
+
+      {can("export") && <AutoBackup />}
 
       <footer className="border-t border-black/5 py-6 text-center text-xs text-charcoal/50 print:hidden">
         VETS Canada — Dartmouth Food Bank · Proudly Supported by DriveX
