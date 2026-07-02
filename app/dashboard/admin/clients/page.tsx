@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export default async function ClientsPage() {
   await requirePermission("clients");
   const { rows } = await sql`
-    SELECT c.id, c.client_id, c.name, c.family_size, c.point_budget, c.is_active,
+    SELECT c.id, c.client_id, c.name, c.first_name, c.last_name, c.family_size, c.point_budget, c.is_active,
            c.archive_reason, c.date_of_birth, c.gender, c.address, c.contact,
            c.email, c.service_number, c.notes, c.has_allergy, c.allergy_info,
            c.code_of_conduct, c.terms_of_service, c.delivery_approved,
@@ -21,6 +21,8 @@ export default async function ClientsPage() {
     id: r.id,
     clientId: r.client_id,
     name: r.name,
+    firstName: r.first_name || "",
+    lastName: r.last_name || "",
     familySize: r.family_size,
     pointBudget: r.point_budget,
     isActive: r.is_active,

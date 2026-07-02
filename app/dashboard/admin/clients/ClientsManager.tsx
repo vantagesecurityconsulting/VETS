@@ -29,6 +29,8 @@ export interface ClientRow {
   id: number;
   clientId: string;
   name: string;
+  firstName: string;
+  lastName: string;
   familySize: number;
   pointBudget: number;
   isActive: boolean;
@@ -439,8 +441,12 @@ export default function ClientsManager({
             </p>
           </div>
           <div>
-            <label className="label">Name (head of household)</label>
-            <input name="name" className="input" required />
+            <label className="label">First Name (head of household)</label>
+            <input name="firstName" className="input" required />
+          </div>
+          <div>
+            <label className="label">Last Name</label>
+            <input name="lastName" className="input" />
           </div>
           <BudgetFields initialSize={1} />
           <ClientDetailFields />
@@ -471,8 +477,12 @@ export default function ClientsManager({
               <form action={onEdit} className="grid gap-3 sm:grid-cols-2">
                 <input type="hidden" name="id" value={c.id} />
                 <div>
-                  <label className="label">Name</label>
-                  <input name="name" defaultValue={c.name} className="input" required />
+                  <label className="label">First Name</label>
+                  <input name="firstName" defaultValue={c.firstName} className="input" required />
+                </div>
+                <div>
+                  <label className="label">Last Name</label>
+                  <input name="lastName" defaultValue={c.lastName} className="input" />
                 </div>
                 <BudgetFields initialSize={c.familySize} initialBudget={c.pointBudget} />
                 <ClientDetailFields c={c} />

@@ -26,18 +26,18 @@ export async function buildExport(type: string): Promise<Export | null> {
   switch (type) {
     case "clients": {
       const { rows } = await sql`
-        SELECT c.client_id, c.name, c.family_size, c.point_budget,
+        SELECT c.client_id, c.name, c.first_name, c.last_name, c.family_size, c.point_budget,
                c.date_of_birth, c.gender, c.contact, c.email, c.address,
                c.service_number, c.notes, c.has_allergy, c.allergy_info,
                c.code_of_conduct, c.terms_of_service, c.delivery_approved,
                CASE WHEN c.is_active THEN 'active' ELSE 'archived' END AS status,
                c.archive_reason, c.created_at,
                (SELECT COUNT(*) FROM family_members fm WHERE fm.client_id = c.id) AS members
-        FROM clients c ORDER BY c.name;
+        FROM clients c ORDER BY c.last_name, c.first_name, c.name;
       `;
       return {
-        headers: ["Client ID", "Name", "Family Size", "Credits", "Date of Birth", "Gender", "Contact", "Email", "Address", "Service Number", "Notes", "Has Allergy", "Allergy Info", "Code of Conduct", "Terms of Service", "Delivery Approved", "Status", "Archive Reason", "Created", "Members On File"],
-        rows: rows.map((r) => [r.client_id, r.name, r.family_size, r.point_budget, r.date_of_birth ? String(r.date_of_birth) : "", r.gender, r.contact, r.email, r.address, r.service_number, r.notes, r.has_allergy ? "yes" : "no", r.allergy_info, r.code_of_conduct ? "yes" : "no", r.terms_of_service ? "yes" : "no", r.delivery_approved ? "yes" : "no", r.status, r.archive_reason, new Date(r.created_at).toISOString().slice(0, 10), r.members]),
+        headers: ["Client ID", "First Name", "Last Name", "Name", "Family Size", "Credits", "Date of Birth", "Gender", "Contact", "Email", "Address", "Service Number", "Notes", "Has Allergy", "Allergy Info", "Code of Conduct", "Terms of Service", "Delivery Approved", "Status", "Archive Reason", "Created", "Members On File"],
+        rows: rows.map((r) => [r.client_id, r.first_name, r.last_name, r.name, r.family_size, r.point_budget, r.date_of_birth ? String(r.date_of_birth) : "", r.gender, r.contact, r.email, r.address, r.service_number, r.notes, r.has_allergy ? "yes" : "no", r.allergy_info, r.code_of_conduct ? "yes" : "no", r.terms_of_service ? "yes" : "no", r.delivery_approved ? "yes" : "no", r.status, r.archive_reason, new Date(r.created_at).toISOString().slice(0, 10), r.members]),
       };
     }
     case "authorized_pickups": {

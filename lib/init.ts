@@ -77,6 +77,8 @@ export async function createTables(): Promise<void> {
       id SERIAL PRIMARY KEY,
       client_id TEXT NOT NULL UNIQUE,
       name TEXT NOT NULL,
+      first_name TEXT,
+      last_name TEXT,
       family_size INTEGER NOT NULL DEFAULT 1,
       point_budget INTEGER NOT NULL,
       date_of_birth DATE,
@@ -426,6 +428,21 @@ export async function runMigrations(): Promise<void> {
   // Compliance sign-offs.
   await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS code_of_conduct BOOLEAN NOT NULL DEFAULT false;`;
   await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS terms_of_service BOOLEAN NOT NULL DEFAULT false;`;
+  // Split first / last name (keep combined `name` for everything that reads it).
+  await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS first_name TEXT;`;
+  await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS last_name TEXT;`;
+  // Best-effort backfill of existing single-field names (first word = first
+  // name, remainder = last name). Only touches rows not yet split.
+  await sql`
+    UPDATE clients
+    SET first_name = split_part(name, ' ', 1),
+        last_name = CASE
+          WHEN position(' ' in name) > 0
+          THEN substring(name from position(' ' in name) + 1)
+          ELSE ''
+        END
+    WHERE first_name IS NULL;
+  `;
   await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS donor_id INTEGER REFERENCES donors(id) ON DELETE SET NULL;`;
   // Index after the column exists (must follow the ADD COLUMN above).
   await sql`CREATE INDEX IF NOT EXISTS idx_transactions_donor ON transactions(donor_id);`;

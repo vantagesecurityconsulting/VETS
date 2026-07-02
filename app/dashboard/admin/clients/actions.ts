@@ -48,15 +48,17 @@ export async function createClientAction(
 ): Promise<ActionResult> {
   await requirePermission("clients");
   const clientId = String(formData.get("clientId") || "").trim();
-  const name = String(formData.get("name") || "").trim();
+  const firstName = String(formData.get("firstName") || "").trim();
+  const lastName = String(formData.get("lastName") || "").trim();
+  const name = [firstName, lastName].filter(Boolean).join(" ");
   const familySize = Math.max(1, Number(formData.get("familySize")) || 1);
   const budgetRaw = String(formData.get("pointBudget") || "").trim();
   const pointBudget =
     budgetRaw === "" ? defaultPointBudget(familySize) : Number(budgetRaw);
   const d = detailFields(formData);
 
-  if (!clientId || !name) {
-    return { success: false, error: "Client ID and name are required." };
+  if (!clientId || !firstName) {
+    return { success: false, error: "Client ID and first name are required." };
   }
 
   const { rows } = await sql`SELECT id FROM clients WHERE client_id = ${clientId};`;
@@ -72,13 +74,14 @@ export async function createClientAction(
 
   await sql`
     INSERT INTO clients
-      (client_id, name, family_size, point_budget, date_of_birth, gender,
-       address, contact, email, service_number, notes, has_allergy, allergy_info,
-       code_of_conduct, terms_of_service, delivery_approved, portal_pin, is_active)
+      (client_id, name, first_name, last_name, family_size, point_budget,
+       date_of_birth, gender, address, contact, email, service_number, notes,
+       has_allergy, allergy_info, code_of_conduct, terms_of_service,
+       delivery_approved, portal_pin, is_active)
     VALUES (
-      ${clientId}, ${name}, ${familySize}, ${pointBudget}, ${d.dob}::date,
-      ${d.gender}, ${d.address}, ${d.contact}, ${d.email}, ${d.serviceNumber},
-      ${d.notes}, ${d.hasAllergy}, ${d.allergyInfo},
+      ${clientId}, ${name}, ${firstName}, ${lastName || null}, ${familySize},
+      ${pointBudget}, ${d.dob}::date, ${d.gender}, ${d.address}, ${d.contact},
+      ${d.email}, ${d.serviceNumber}, ${d.notes}, ${d.hasAllergy}, ${d.allergyInfo},
       ${d.codeOfConduct}, ${d.termsOfService}, ${d.deliveryApproved}, ${portalPin}, true
     );
   `;
@@ -91,18 +94,21 @@ export async function updateClientAction(
 ): Promise<ActionResult> {
   await requirePermission("clients");
   const id = Number(formData.get("id"));
-  const name = String(formData.get("name") || "").trim();
+  const firstName = String(formData.get("firstName") || "").trim();
+  const lastName = String(formData.get("lastName") || "").trim();
+  const name = [firstName, lastName].filter(Boolean).join(" ");
   const familySize = Math.max(1, Number(formData.get("familySize")) || 1);
   const pointBudget = Number(formData.get("pointBudget"));
   const d = detailFields(formData);
 
-  if (!id || !name) {
-    return { success: false, error: "Name is required." };
+  if (!id || !firstName) {
+    return { success: false, error: "First name is required." };
   }
 
   await sql`
     UPDATE clients
-    SET name = ${name}, family_size = ${familySize}, point_budget = ${pointBudget},
+    SET name = ${name}, first_name = ${firstName}, last_name = ${lastName || null},
+        family_size = ${familySize}, point_budget = ${pointBudget},
         date_of_birth = ${d.dob}::date, gender = ${d.gender}, address = ${d.address},
         contact = ${d.contact}, email = ${d.email}, service_number = ${d.serviceNumber},
         notes = ${d.notes}, has_allergy = ${d.hasAllergy}, allergy_info = ${d.allergyInfo},
