@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import type { CatalogCategory, ClientRecord } from "@/lib/queries";
 import {
   searchClientsAction,
@@ -14,15 +14,33 @@ type Step = "search" | "build" | "done";
 
 export default function VisitFlow({
   catalog,
+  preselect,
 }: {
   catalog: CatalogCategory[];
+  preselect?: ClientRecord | null;
 }) {
-  const [step, setStep] = useState<Step>("search");
+  const [step, setStep] = useState<Step>(preselect ? "build" : "search");
   const [term, setTerm] = useState("");
   const [results, setResults] = useState<ClientRecord[]>([]);
   const [searching, startSearch] = useTransition();
-  const [client, setClient] = useState<ClientRecord | null>(null);
+  const [client, setClient] = useState<ClientRecord | null>(preselect ?? null);
   const [monthWarning, setMonthWarning] = useState<string | null>(null);
+
+  // If we arrived from an appointment with a client already chosen, run the
+  // once-a-month check for them right away.
+  useEffect(() => {
+    if (!preselect) return;
+    getClientMonthStatusAction(preselect.id).then((s) => {
+      if (s.shoppedThisMonth) {
+        setMonthWarning(
+          `${preselect.name} has already shopped this month${
+            s.lastVisit ? ` (last visit ${s.lastVisit})` : ""
+          }. Families get one visit per month — confirm only if a manager approves.`
+        );
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // cart: itemId -> quantity
   const [cart, setCart] = useState<Record<number, number>>({});

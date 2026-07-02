@@ -49,6 +49,7 @@ export default async function SchedulePage({
     time: r.appt_time,
     name: r.client_record_name || r.client_name || "(unnamed)",
     clientCode: r.client_code || null,
+    clientDbId: r.client_id || null,
     status: r.status,
     notes: r.notes,
     hasAllergy: !!r.has_allergy,

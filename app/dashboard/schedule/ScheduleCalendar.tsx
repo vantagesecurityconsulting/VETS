@@ -20,6 +20,7 @@ export interface Appt {
   time: string | null;
   name: string;
   clientCode: string | null;
+  clientDbId: number | null;
   status: "scheduled" | "completed" | "cancelled" | "no_show";
   notes: string | null;
   hasAllergy: boolean;
@@ -385,6 +386,15 @@ export default function ScheduleCalendar({
                     <span className={`mt-1 inline-block rounded-full px-1.5 py-0.5 text-[10px] font-bold ${STATUS_CLASS[a.status]}`}>
                       {STATUS_LABEL[a.status]}
                     </span>
+                    {a.clientDbId && a.status !== "cancelled" && (
+                      <Link
+                        href={`/dashboard/visit?client=${a.clientDbId}`}
+                        className="mt-1 block rounded-md bg-navy px-2 py-1 text-center text-[11px] font-bold text-white hover:bg-navy/90"
+                        title="Start this client's shopping visit"
+                      >
+                        🛒 Start Visit
+                      </Link>
+                    )}
                     <div className="mt-1 flex flex-wrap gap-1">
                       {a.status !== "completed" && (
                         <button onClick={() => setStatus(a.id, "completed")} className="text-[10px] font-semibold text-green-700">✓ Done</button>
