@@ -10,9 +10,10 @@ export default async function ClientsPage() {
     SELECT c.id, c.client_id, c.name, c.family_size, c.point_budget, c.is_active,
            c.archive_reason, c.date_of_birth, c.gender, c.address, c.contact,
            c.email, c.service_number, c.notes, c.has_allergy, c.allergy_info,
-           c.delivery_approved,
+           c.code_of_conduct, c.terms_of_service, c.delivery_approved,
            (c.portal_pin IS NOT NULL) AS has_portal_pin,
-           (SELECT COUNT(*)::int FROM family_members fm WHERE fm.client_id = c.id) AS member_count
+           (SELECT COUNT(*)::int FROM family_members fm WHERE fm.client_id = c.id) AS member_count,
+           (SELECT COUNT(*)::int FROM authorized_pickups ap WHERE ap.client_id = c.id) AS pickup_count
     FROM clients c
     ORDER BY c.is_active DESC, c.name;
   `;
@@ -34,6 +35,9 @@ export default async function ClientsPage() {
     notes: r.notes,
     hasAllergy: r.has_allergy,
     allergyInfo: r.allergy_info,
+    codeOfConduct: r.code_of_conduct,
+    termsOfService: r.terms_of_service,
+    pickupCount: r.pickup_count,
     deliveryApproved: r.delivery_approved,
     hasPortalPin: r.has_portal_pin,
   }));

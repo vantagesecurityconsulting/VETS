@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 const EXPORTS = [
   { type: "clients", title: "Clients", desc: "All client records, credits, status, archive reasons" },
   { type: "family_members", title: "Family Members", desc: "Household members with details & allergy notes" },
+  { type: "authorized_pickups", title: "Authorized Pickups", desc: "People allowed to collect on a client's behalf" },
   { type: "inventory", title: "Inventory", desc: "Current stock with prices, weights, values, expiry" },
   { type: "transactions", title: "Transactions", desc: "Every visit, donation, count & write-off" },
   { type: "donors", title: "Donors", desc: "Donor registry with totals donated" },

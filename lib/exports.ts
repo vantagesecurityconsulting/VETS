@@ -8,6 +8,7 @@ export type Export = { headers: string[]; rows: unknown[][] };
 export const EXPORT_TYPES = [
   "clients",
   "family_members",
+  "authorized_pickups",
   "inventory",
   "transactions",
   "donors",
@@ -28,15 +29,28 @@ export async function buildExport(type: string): Promise<Export | null> {
         SELECT c.client_id, c.name, c.family_size, c.point_budget,
                c.date_of_birth, c.gender, c.contact, c.email, c.address,
                c.service_number, c.notes, c.has_allergy, c.allergy_info,
-               c.delivery_approved,
+               c.code_of_conduct, c.terms_of_service, c.delivery_approved,
                CASE WHEN c.is_active THEN 'active' ELSE 'archived' END AS status,
                c.archive_reason, c.created_at,
                (SELECT COUNT(*) FROM family_members fm WHERE fm.client_id = c.id) AS members
         FROM clients c ORDER BY c.name;
       `;
       return {
-        headers: ["Client ID", "Name", "Family Size", "Credits", "Date of Birth", "Gender", "Contact", "Email", "Address", "Service Number", "Notes", "Has Allergy", "Allergy Info", "Delivery Approved", "Status", "Archive Reason", "Created", "Members On File"],
-        rows: rows.map((r) => [r.client_id, r.name, r.family_size, r.point_budget, r.date_of_birth ? String(r.date_of_birth) : "", r.gender, r.contact, r.email, r.address, r.service_number, r.notes, r.has_allergy ? "yes" : "no", r.allergy_info, r.delivery_approved ? "yes" : "no", r.status, r.archive_reason, new Date(r.created_at).toISOString().slice(0, 10), r.members]),
+        headers: ["Client ID", "Name", "Family Size", "Credits", "Date of Birth", "Gender", "Contact", "Email", "Address", "Service Number", "Notes", "Has Allergy", "Allergy Info", "Code of Conduct", "Terms of Service", "Delivery Approved", "Status", "Archive Reason", "Created", "Members On File"],
+        rows: rows.map((r) => [r.client_id, r.name, r.family_size, r.point_budget, r.date_of_birth ? String(r.date_of_birth) : "", r.gender, r.contact, r.email, r.address, r.service_number, r.notes, r.has_allergy ? "yes" : "no", r.allergy_info, r.code_of_conduct ? "yes" : "no", r.terms_of_service ? "yes" : "no", r.delivery_approved ? "yes" : "no", r.status, r.archive_reason, new Date(r.created_at).toISOString().slice(0, 10), r.members]),
+      };
+    }
+    case "authorized_pickups": {
+      const { rows } = await sql`
+        SELECT cl.client_id, cl.name AS household, ap.name, ap.relationship,
+               ap.contact, ap.notes
+        FROM authorized_pickups ap
+        JOIN clients cl ON cl.id = ap.client_id
+        ORDER BY cl.name, ap.id;
+      `;
+      return {
+        headers: ["Client ID", "Household", "Authorized Person", "Relationship", "Contact", "Notes"],
+        rows: rows.map((r) => [r.client_id, r.household, r.name, r.relationship, r.contact, r.notes]),
       };
     }
     case "family_members": {

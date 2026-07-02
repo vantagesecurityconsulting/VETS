@@ -31,6 +31,12 @@ function detailFields(formData: FormData) {
       formData.get("hasAllergy") === "on" ||
       formData.get("hasAllergy") === "true",
     allergyInfo: get("allergyInfo"),
+    codeOfConduct:
+      formData.get("codeOfConduct") === "on" ||
+      formData.get("codeOfConduct") === "true",
+    termsOfService:
+      formData.get("termsOfService") === "on" ||
+      formData.get("termsOfService") === "true",
     deliveryApproved:
       formData.get("deliveryApproved") === "on" ||
       formData.get("deliveryApproved") === "true",
@@ -68,12 +74,12 @@ export async function createClientAction(
     INSERT INTO clients
       (client_id, name, family_size, point_budget, date_of_birth, gender,
        address, contact, email, service_number, notes, has_allergy, allergy_info,
-       delivery_approved, portal_pin, is_active)
+       code_of_conduct, terms_of_service, delivery_approved, portal_pin, is_active)
     VALUES (
       ${clientId}, ${name}, ${familySize}, ${pointBudget}, ${d.dob}::date,
       ${d.gender}, ${d.address}, ${d.contact}, ${d.email}, ${d.serviceNumber},
       ${d.notes}, ${d.hasAllergy}, ${d.allergyInfo},
-      ${d.deliveryApproved}, ${portalPin}, true
+      ${d.codeOfConduct}, ${d.termsOfService}, ${d.deliveryApproved}, ${portalPin}, true
     );
   `;
   revalidatePath("/dashboard/admin/clients");
@@ -100,6 +106,7 @@ export async function updateClientAction(
         date_of_birth = ${d.dob}::date, gender = ${d.gender}, address = ${d.address},
         contact = ${d.contact}, email = ${d.email}, service_number = ${d.serviceNumber},
         notes = ${d.notes}, has_allergy = ${d.hasAllergy}, allergy_info = ${d.allergyInfo},
+        code_of_conduct = ${d.codeOfConduct}, terms_of_service = ${d.termsOfService},
         delivery_approved = ${d.deliveryApproved}
     WHERE id = ${id};
   `;
@@ -215,6 +222,60 @@ export async function deleteFamilyMemberAction(
 ): Promise<ActionResult> {
   await requirePermission("clients");
   await sql`DELETE FROM family_members WHERE id = ${id};`;
+  revalidatePath("/dashboard/admin/clients");
+  return { success: true };
+}
+
+// -------------------------- Authorized pickups ---------------------------
+
+export interface AuthorizedPickup {
+  id: number;
+  name: string;
+  relationship: string | null;
+  contact: string | null;
+  notes: string | null;
+}
+
+export async function getPickupsAction(
+  clientId: number
+): Promise<AuthorizedPickup[]> {
+  await requirePermission("clients");
+  const { rows } = await sql`
+    SELECT id, name, relationship, contact, notes
+    FROM authorized_pickups WHERE client_id = ${clientId} ORDER BY id;
+  `;
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    relationship: r.relationship,
+    contact: r.contact,
+    notes: r.notes,
+  }));
+}
+
+export async function addPickupAction(
+  formData: FormData
+): Promise<ActionResult> {
+  await requirePermission("clients");
+  const clientId = Number(formData.get("clientId"));
+  if (!clientId) return { success: false, error: "Missing client." };
+  const get = (k: string) => {
+    const v = String(formData.get(k) || "").trim();
+    return v === "" ? null : v;
+  };
+  const name = get("name");
+  if (!name) return { success: false, error: "Name is required." };
+  await sql`
+    INSERT INTO authorized_pickups (client_id, name, relationship, contact, notes)
+    VALUES (${clientId}, ${name}, ${get("relationship")}, ${get("contact")}, ${get("notes")});
+  `;
+  revalidatePath("/dashboard/admin/clients");
+  return { success: true };
+}
+
+export async function deletePickupAction(id: number): Promise<ActionResult> {
+  await requirePermission("clients");
+  await sql`DELETE FROM authorized_pickups WHERE id = ${id};`;
   revalidatePath("/dashboard/admin/clients");
   return { success: true };
 }

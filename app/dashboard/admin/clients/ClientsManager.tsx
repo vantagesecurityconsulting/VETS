@@ -15,9 +15,13 @@ import {
   getClientBasketsAction,
   addBasketAction,
   deleteBasketAction,
+  getPickupsAction,
+  addPickupAction,
+  deletePickupAction,
   type VisitHistoryRow,
   type FamilyMember,
   type HolidayBasket,
+  type AuthorizedPickup,
 } from "./actions";
 import { HOLIDAYS } from "@/lib/holidays";
 
@@ -39,6 +43,9 @@ export interface ClientRow {
   notes: string | null;
   hasAllergy: boolean;
   allergyInfo: string | null;
+  codeOfConduct: boolean;
+  termsOfService: boolean;
+  pickupCount: number;
   deliveryApproved: boolean;
   hasPortalPin: boolean;
 }
@@ -101,6 +108,30 @@ function ClientDetailFields({ c }: { c?: ClientRow }) {
             placeholder="What is the allergy / sensitivity? (e.g. peanuts, gluten, shellfish)"
           />
         )}
+      </div>
+      <div className="grid gap-2 sm:col-span-2 sm:grid-cols-2">
+        <label className="flex items-center gap-2 rounded-lg border border-navy/20 bg-navy/5 px-3 py-2.5">
+          <input
+            type="checkbox"
+            name="codeOfConduct"
+            defaultChecked={c?.codeOfConduct}
+            className="h-5 w-5"
+          />
+          <span className="text-sm font-semibold text-navy">
+            Code of Conduct completed
+          </span>
+        </label>
+        <label className="flex items-center gap-2 rounded-lg border border-navy/20 bg-navy/5 px-3 py-2.5">
+          <input
+            type="checkbox"
+            name="termsOfService"
+            defaultChecked={c?.termsOfService}
+            className="h-5 w-5"
+          />
+          <span className="text-sm font-semibold text-navy">
+            Terms of Service completed
+          </span>
+        </label>
       </div>
       <div className="sm:col-span-2">
         <label className="flex items-center gap-2 rounded-lg border border-gold/40 bg-gold/10 px-3 py-2.5">
@@ -220,6 +251,8 @@ export default function ClientsManager({
   const [family, setFamily] = useState<FamilyMember[]>([]);
   const [basketsFor, setBasketsFor] = useState<number | null>(null);
   const [baskets, setBaskets] = useState<HolidayBasket[]>([]);
+  const [pickupsFor, setPickupsFor] = useState<number | null>(null);
+  const [pickups, setPickups] = useState<AuthorizedPickup[]>([]);
 
   const list = clients.filter((c) => (tab === "active" ? c.isActive : !c.isActive));
   const filtered = list.filter(
@@ -275,10 +308,16 @@ export default function ClientsManager({
     });
   };
 
-  const loadHistory = async (id: number) => {
-    if (historyFor === id) return setHistoryFor(null);
+  const closePanels = () => {
+    setHistoryFor(null);
     setFamilyFor(null);
     setBasketsFor(null);
+    setPickupsFor(null);
+  };
+
+  const loadHistory = async (id: number) => {
+    if (historyFor === id) return setHistoryFor(null);
+    closePanels();
     const rows = await getClientHistoryAction(id);
     setHistory(rows);
     setHistoryFor(id);
@@ -286,8 +325,7 @@ export default function ClientsManager({
 
   const loadFamily = async (id: number) => {
     if (familyFor === id) return setFamilyFor(null);
-    setHistoryFor(null);
-    setBasketsFor(null);
+    closePanels();
     const rows = await getFamilyMembersAction(id);
     setFamily(rows);
     setFamilyFor(id);
@@ -295,11 +333,33 @@ export default function ClientsManager({
 
   const loadBaskets = async (id: number) => {
     if (basketsFor === id) return setBasketsFor(null);
-    setHistoryFor(null);
-    setFamilyFor(null);
+    closePanels();
     const rows = await getClientBasketsAction(id);
     setBaskets(rows);
     setBasketsFor(id);
+  };
+
+  const loadPickups = async (id: number) => {
+    if (pickupsFor === id) return setPickupsFor(null);
+    closePanels();
+    const rows = await getPickupsAction(id);
+    setPickups(rows);
+    setPickupsFor(id);
+  };
+
+  const addPickup = async (fd: FormData) => {
+    setError("");
+    const res = await addPickupAction(fd);
+    if (!res.success) return setError(res.error || "Failed.");
+    const clientId = Number(fd.get("clientId"));
+    setPickups(await getPickupsAction(clientId));
+    router.refresh();
+  };
+
+  const removePickup = async (pickupId: number, clientId: number) => {
+    await deletePickupAction(pickupId);
+    setPickups(await getPickupsAction(clientId));
+    router.refresh();
   };
 
   const addBasket = async (fd: FormData) => {
@@ -461,6 +521,26 @@ export default function ClientsManager({
                     {c.notes && (
                       <p className="mt-0.5 text-xs font-semibold text-charcoal/60">{c.notes}</p>
                     )}
+                    <p className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
+                      <span
+                        className={`rounded-full px-2 py-0.5 font-semibold ${
+                          c.codeOfConduct
+                            ? "bg-green-100 text-green-700"
+                            : "bg-charcoal/10 text-charcoal/50"
+                        }`}
+                      >
+                        {c.codeOfConduct ? "✓" : "○"} Code of Conduct
+                      </span>
+                      <span
+                        className={`rounded-full px-2 py-0.5 font-semibold ${
+                          c.termsOfService
+                            ? "bg-green-100 text-green-700"
+                            : "bg-charcoal/10 text-charcoal/50"
+                        }`}
+                      >
+                        {c.termsOfService ? "✓" : "○"} Terms of Service
+                      </span>
+                    </p>
                     {!c.isActive && c.archiveReason && (
                       <p className="mt-1 text-xs italic text-charcoal/50">
                         Archived: {c.archiveReason}
@@ -470,6 +550,11 @@ export default function ClientsManager({
                   <div className="flex flex-wrap gap-2">
                     <button onClick={() => loadFamily(c.id)} className="btn-outline text-sm">
                       {familyFor === c.id ? "Hide Family" : "Family"}
+                    </button>
+                    <button onClick={() => loadPickups(c.id)} className="btn-outline text-sm">
+                      {pickupsFor === c.id
+                        ? "Hide Pickups"
+                        : `Pickups${c.pickupCount > 0 ? ` (${c.pickupCount})` : ""}`}
                     </button>
                     <button onClick={() => loadBaskets(c.id)} className="btn-outline text-sm">
                       {basketsFor === c.id ? "Hide Baskets" : "🎁 Baskets"}
@@ -559,6 +644,71 @@ export default function ClientsManager({
                       />
                       <div className="sm:col-span-3">
                         <button className="btn-primary text-sm">+ Add Member</button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+
+                {/* Authorized pickups panel */}
+                {pickupsFor === c.id && (
+                  <div className="mt-3 border-t border-black/5 pt-3">
+                    <p className="mb-2 text-sm font-semibold text-navy">
+                      Authorized to Pick Up{" "}
+                      <span className="font-normal text-charcoal/50">
+                        (people allowed to collect on this client&apos;s behalf)
+                      </span>
+                    </p>
+                    {pickups.length === 0 ? (
+                      <p className="text-sm text-charcoal/50">
+                        No authorized pickup people added yet.
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {pickups.map((p) => (
+                          <div
+                            key={p.id}
+                            className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-offwhite px-3 py-2 text-sm"
+                          >
+                            <div>
+                              <span className="font-medium">{p.name}</span>
+                              <span className="text-charcoal/50">
+                                {p.relationship ? ` · ${p.relationship}` : ""}
+                                {p.contact ? ` · ${p.contact}` : ""}
+                              </span>
+                              {p.notes && (
+                                <span className="block text-xs text-charcoal/50">
+                                  {p.notes}
+                                </span>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => removePickup(p.id, c.id)}
+                              className="rounded px-2 py-1 text-xs font-semibold text-military"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <form action={addPickup} className="mt-3 grid gap-2 sm:grid-cols-3">
+                      <input type="hidden" name="clientId" value={c.id} />
+                      <input name="name" placeholder="Full name" className="input" required />
+                      <input
+                        name="relationship"
+                        placeholder="Relationship (e.g. spouse, son)"
+                        className="input"
+                      />
+                      <input name="contact" placeholder="Contact number" className="input" />
+                      <input
+                        name="notes"
+                        placeholder="Notes (e.g. photo ID on file)"
+                        className="input sm:col-span-3"
+                      />
+                      <div className="sm:col-span-3">
+                        <button className="btn-primary text-sm">
+                          + Add Authorized Person
+                        </button>
                       </div>
                     </form>
                   </div>
