@@ -6,6 +6,7 @@ import {
   getLifetimeTotals,
   getCreditSnapshot,
   getInactiveClients,
+  getMembershipBreakdown,
   DEFAULT_EXPIRY_THRESHOLD_DAYS,
   DEFAULT_INACTIVE_DAYS,
 } from "@/lib/admin-queries";
@@ -58,12 +59,13 @@ export default async function AdminHome() {
   const visibleLinks = adminLinks.filter((l) =>
     l.perm === "manager" ? isManager : perms.includes(l.perm)
   );
-  const [stats, expiring, lifetime, credits, inactive] = await Promise.all([
+  const [stats, expiring, lifetime, credits, inactive, membership] = await Promise.all([
     getOverviewStats(),
     getExpiringItems(DEFAULT_EXPIRY_THRESHOLD_DAYS),
     getLifetimeTotals(),
     getCreditSnapshot(),
     getInactiveClients(DEFAULT_INACTIVE_DAYS),
+    getMembershipBreakdown(),
   ]);
 
   const coverage =
@@ -140,6 +142,30 @@ export default async function AdminHome() {
             <p className="text-sm text-charcoal/60">
               Inventory coverage of monthly demand
             </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Membership breakdown */}
+      <div className="mt-4 rounded-xl border border-navy/20 bg-white p-5 shadow-sm">
+        <h2 className="font-heading text-lg font-bold text-navy">
+          Membership (active clients)
+        </h2>
+        <p className="text-sm text-charcoal/60">
+          Who&apos;s who across your {number(membership.total)} active clients.
+        </p>
+        <div className="mt-3 grid gap-4 sm:grid-cols-3">
+          <div className="rounded-lg border border-navy/10 bg-navy/5 p-4">
+            <p className="text-2xl font-bold text-navy">{number(membership.serving)}</p>
+            <p className="text-sm text-charcoal/60">Serving members</p>
+          </div>
+          <div className="rounded-lg border border-gold/20 bg-gold/10 p-4">
+            <p className="text-2xl font-bold text-navy">{number(membership.retired)}</p>
+            <p className="text-sm text-charcoal/60">Retired members</p>
+          </div>
+          <div className="rounded-lg border border-black/5 bg-offwhite p-4">
+            <p className="text-2xl font-bold text-charcoal/70">{number(membership.unspecified)}</p>
+            <p className="text-sm text-charcoal/60">Not specified yet</p>
           </div>
         </div>
       </div>

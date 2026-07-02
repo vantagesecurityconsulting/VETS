@@ -38,6 +38,7 @@ export interface ClientRow {
   memberCount: number;
   dateOfBirth: string | null;
   gender: string | null;
+  memberStatus: string | null;
   address: string | null;
   contact: string | null;
   email: string | null;
@@ -64,6 +65,14 @@ function ClientDetailFields({ c }: { c?: ClientRow }) {
       <div>
         <label className="label">Gender</label>
         <input name="gender" defaultValue={c?.gender ?? ""} className="input" />
+      </div>
+      <div>
+        <label className="label">Member Status</label>
+        <select name="memberStatus" defaultValue={c?.memberStatus ?? ""} className="input">
+          <option value="">Not specified</option>
+          <option value="serving">Serving member</option>
+          <option value="retired">Retired member</option>
+        </select>
       </div>
       <div>
         <label className="label">Contact Number</label>
@@ -507,6 +516,16 @@ export default function ClientsManager({
                       {c.hasAllergy && (
                         <span className="ml-2 rounded-full bg-military/15 px-2 py-0.5 text-xs font-bold text-military">
                           ⚠ Allergy
+                        </span>
+                      )}
+                      {c.memberStatus === "serving" && (
+                        <span className="ml-2 rounded-full bg-navy/10 px-2 py-0.5 text-xs font-bold text-navy">
+                          Serving
+                        </span>
+                      )}
+                      {c.memberStatus === "retired" && (
+                        <span className="ml-2 rounded-full bg-gold/20 px-2 py-0.5 text-xs font-bold text-gold">
+                          Retired
                         </span>
                       )}
                     </p>

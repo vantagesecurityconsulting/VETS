@@ -83,6 +83,7 @@ export async function createTables(): Promise<void> {
       point_budget INTEGER NOT NULL,
       date_of_birth DATE,
       gender TEXT,
+      member_status TEXT,
       address TEXT,
       contact TEXT,
       email TEXT,
@@ -428,6 +429,8 @@ export async function runMigrations(): Promise<void> {
   // Compliance sign-offs.
   await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS code_of_conduct BOOLEAN NOT NULL DEFAULT false;`;
   await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS terms_of_service BOOLEAN NOT NULL DEFAULT false;`;
+  // Serving / retired member status (for who's-who reporting).
+  await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS member_status TEXT;`;
   // Split first / last name (keep combined `name` for everything that reads it).
   await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS first_name TEXT;`;
   await sql`ALTER TABLE clients ADD COLUMN IF NOT EXISTS last_name TEXT;`;

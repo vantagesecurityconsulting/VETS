@@ -8,7 +8,7 @@ export default async function ClientsPage() {
   await requirePermission("clients");
   const { rows } = await sql`
     SELECT c.id, c.client_id, c.name, c.first_name, c.last_name, c.family_size, c.point_budget, c.is_active,
-           c.archive_reason, c.date_of_birth, c.gender, c.address, c.contact,
+           c.archive_reason, c.date_of_birth, c.gender, c.member_status, c.address, c.contact,
            c.email, c.service_number, c.notes, c.has_allergy, c.allergy_info,
            c.code_of_conduct, c.terms_of_service, c.delivery_approved,
            (c.portal_pin IS NOT NULL) AS has_portal_pin,
@@ -30,6 +30,7 @@ export default async function ClientsPage() {
     memberCount: r.member_count,
     dateOfBirth: r.date_of_birth ? String(r.date_of_birth) : null,
     gender: r.gender,
+    memberStatus: r.member_status,
     address: r.address,
     contact: r.contact,
     email: r.email,

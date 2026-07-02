@@ -22,6 +22,7 @@ function detailFields(formData: FormData) {
   return {
     dob: get("dob"),
     gender: get("gender"),
+    memberStatus: get("memberStatus"),
     address: get("address"),
     contact: get("contact"),
     email: get("email"),
@@ -75,12 +76,12 @@ export async function createClientAction(
   await sql`
     INSERT INTO clients
       (client_id, name, first_name, last_name, family_size, point_budget,
-       date_of_birth, gender, address, contact, email, service_number, notes,
+       date_of_birth, gender, member_status, address, contact, email, service_number, notes,
        has_allergy, allergy_info, code_of_conduct, terms_of_service,
        delivery_approved, portal_pin, is_active)
     VALUES (
       ${clientId}, ${name}, ${firstName}, ${lastName || null}, ${familySize},
-      ${pointBudget}, ${d.dob}::date, ${d.gender}, ${d.address}, ${d.contact},
+      ${pointBudget}, ${d.dob}::date, ${d.gender}, ${d.memberStatus}, ${d.address}, ${d.contact},
       ${d.email}, ${d.serviceNumber}, ${d.notes}, ${d.hasAllergy}, ${d.allergyInfo},
       ${d.codeOfConduct}, ${d.termsOfService}, ${d.deliveryApproved}, ${portalPin}, true
     );
@@ -109,7 +110,8 @@ export async function updateClientAction(
     UPDATE clients
     SET name = ${name}, first_name = ${firstName}, last_name = ${lastName || null},
         family_size = ${familySize}, point_budget = ${pointBudget},
-        date_of_birth = ${d.dob}::date, gender = ${d.gender}, address = ${d.address},
+        date_of_birth = ${d.dob}::date, gender = ${d.gender},
+        member_status = ${d.memberStatus}, address = ${d.address},
         contact = ${d.contact}, email = ${d.email}, service_number = ${d.serviceNumber},
         notes = ${d.notes}, has_allergy = ${d.hasAllergy}, allergy_info = ${d.allergyInfo},
         code_of_conduct = ${d.codeOfConduct}, terms_of_service = ${d.termsOfService},

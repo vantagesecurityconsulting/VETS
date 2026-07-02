@@ -74,6 +74,32 @@ export async function getCreditSnapshot(): Promise<CreditSnapshot> {
   };
 }
 
+export interface MembershipBreakdown {
+  serving: number;
+  retired: number;
+  unspecified: number;
+  total: number;
+}
+
+/** Active clients split by serving / retired / unspecified member status. */
+export async function getMembershipBreakdown(): Promise<MembershipBreakdown> {
+  const { rows } = await sql`
+    SELECT
+      COUNT(*) FILTER (WHERE member_status = 'serving')::int AS serving,
+      COUNT(*) FILTER (WHERE member_status = 'retired')::int AS retired,
+      COUNT(*) FILTER (WHERE member_status IS NULL OR member_status NOT IN ('serving','retired'))::int AS unspecified,
+      COUNT(*)::int AS total
+    FROM clients
+    WHERE is_active = true;
+  `;
+  return {
+    serving: rows[0]?.serving ?? 0,
+    retired: rows[0]?.retired ?? 0,
+    unspecified: rows[0]?.unspecified ?? 0,
+    total: rows[0]?.total ?? 0,
+  };
+}
+
 export const DEFAULT_INACTIVE_DAYS = 60;
 
 export interface InactiveClient {
