@@ -1,4 +1,4 @@
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, getCurrentPermissions } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import ScheduleCalendar, {
   type Appt,
@@ -25,6 +25,8 @@ export default async function SchedulePage({
   searchParams: { week?: string };
 }) {
   await requireAuth();
+  const perms = await getCurrentPermissions();
+  const canViewClients = perms.includes("clients");
 
   const base = searchParams.week ? new Date(searchParams.week) : new Date();
   const start = mondayOf(isNaN(base.getTime()) ? new Date() : base);
@@ -33,7 +35,8 @@ export default async function SchedulePage({
 
   const { rows } = await sql`
     SELECT a.id, a.client_id, a.client_name, a.appt_date, a.appt_time, a.status, a.notes,
-           cl.name AS client_record_name, cl.has_allergy, cl.allergy_info
+           cl.name AS client_record_name, cl.client_id AS client_code,
+           cl.has_allergy, cl.allergy_info
     FROM appointments a
     LEFT JOIN clients cl ON cl.id = a.client_id
     WHERE a.appt_date BETWEEN ${iso(start)}::date AND ${iso(end)}::date
@@ -45,6 +48,7 @@ export default async function SchedulePage({
     date: iso(new Date(r.appt_date)),
     time: r.appt_time,
     name: r.client_record_name || r.client_name || "(unnamed)",
+    clientCode: r.client_code || null,
     status: r.status,
     notes: r.notes,
     hasAllergy: !!r.has_allergy,
@@ -100,6 +104,7 @@ export default async function SchedulePage({
       shifts={shifts}
       availability={availability}
       staff={staff}
+      canViewClients={canViewClients}
     />
   );
 }

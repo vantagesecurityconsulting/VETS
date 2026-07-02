@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   createClientAction,
   updateClientAction,
@@ -238,12 +238,19 @@ export default function ClientsManager({
   nextClientId: string;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const focus = searchParams.get("focus") || "";
+  const focusClient = focus
+    ? clients.find((c) => c.clientId.toLowerCase() === focus.toLowerCase())
+    : undefined;
   const [, startTransition] = useTransition();
-  const [tab, setTab] = useState<"active" | "archived">("active");
+  const [tab, setTab] = useState<"active" | "archived">(
+    focusClient && !focusClient.isActive ? "archived" : "active"
+  );
   const [showAdd, setShowAdd] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [error, setError] = useState("");
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(focus);
 
   const [historyFor, setHistoryFor] = useState<number | null>(null);
   const [history, setHistory] = useState<VisitHistoryRow[]>([]);

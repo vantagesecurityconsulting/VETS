@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ClientRecord } from "@/lib/queries";
 import type { StaffOption } from "./actions";
@@ -18,6 +19,7 @@ export interface Appt {
   date: string;
   time: string | null;
   name: string;
+  clientCode: string | null;
   status: "scheduled" | "completed" | "cancelled" | "no_show";
   notes: string | null;
   hasAllergy: boolean;
@@ -70,12 +72,14 @@ export default function ScheduleCalendar({
   shifts,
   availability,
   staff,
+  canViewClients,
 }: {
   weekStart: string;
   appts: Appt[];
   shifts: Shift[];
   availability: Availability[];
   staff: StaffOption[];
+  canViewClients: boolean;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -358,7 +362,18 @@ export default function ScheduleCalendar({
                   >
                     <div className="flex items-center justify-between gap-1">
                       <span className="font-semibold text-charcoal">
-                        {a.time ? `${a.time} · ` : ""}{a.name}
+                        {a.time ? `${a.time} · ` : ""}
+                        {canViewClients && a.clientCode ? (
+                          <Link
+                            href={`/dashboard/admin/clients?focus=${encodeURIComponent(a.clientCode)}`}
+                            className="text-navy underline decoration-dotted underline-offset-2 hover:text-military"
+                            title="Open client file"
+                          >
+                            {a.name}
+                          </Link>
+                        ) : (
+                          a.name
+                        )}
                       </span>
                     </div>
                     {a.hasAllergy && (
