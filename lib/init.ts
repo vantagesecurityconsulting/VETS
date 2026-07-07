@@ -108,6 +108,7 @@ export async function createTables(): Promise<void> {
       name TEXT,
       date_of_birth DATE,
       gender TEXT,
+      relation TEXT,
       address TEXT,
       contact TEXT,
       email TEXT,
@@ -456,6 +457,7 @@ export async function runMigrations(): Promise<void> {
   // Family member extra fields.
   await sql`ALTER TABLE family_members ADD COLUMN IF NOT EXISTS email TEXT;`;
   await sql`ALTER TABLE family_members ADD COLUMN IF NOT EXISTS notes TEXT;`;
+  await sql`ALTER TABLE family_members ADD COLUMN IF NOT EXISTS relation TEXT;`;
   // Volunteer profile fields.
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS emergency_contact TEXT;`;
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS availability TEXT;`;

@@ -637,22 +637,10 @@ export default function ClientsManager({
                             <div>
                               <span className="font-medium">{m.name || "(no name)"}</span>
                               <span className="text-charcoal/50">
+                                {m.relation ? ` · ${m.relation}` : ""}
                                 {m.dateOfBirth ? ` · DOB ${m.dateOfBirth}` : ""}
                                 {m.gender ? ` · ${m.gender}` : ""}
-                                {m.serviceNumber ? ` · SN ${m.serviceNumber}` : ""}
                               </span>
-                              {(m.address || m.contact || m.email) && (
-                                <span className="block text-xs text-charcoal/50">
-                                  {[m.contact, m.email, m.address]
-                                    .filter(Boolean)
-                                    .join(" · ")}
-                                </span>
-                              )}
-                              {m.notes && (
-                                <span className="block text-xs font-semibold text-military">
-                                  ⚠ {m.notes}
-                                </span>
-                              )}
                             </div>
                             <button
                               onClick={() => removeMember(m.id, c.id)}
@@ -664,21 +652,17 @@ export default function ClientsManager({
                         ))}
                       </div>
                     )}
-                    <form action={addMember} className="mt-3 grid gap-2 sm:grid-cols-3">
+                    <form action={addMember} className="mt-3 grid gap-2 sm:grid-cols-2">
                       <input type="hidden" name="clientId" value={c.id} />
                       <input name="name" placeholder="Full name" className="input" />
+                      <input
+                        name="relation"
+                        placeholder="Relation to client (e.g. spouse, son, daughter)"
+                        className="input"
+                      />
                       <input name="dob" type="date" className="input" title="Date of birth" />
                       <input name="gender" placeholder="Gender" className="input" />
-                      <input name="serviceNumber" placeholder="Service number" className="input" />
-                      <input name="contact" placeholder="Contact number" className="input" />
-                      <input name="email" type="email" placeholder="Email" className="input" />
-                      <input name="address" placeholder="Address" className="input sm:col-span-3" />
-                      <input
-                        name="notes"
-                        placeholder="Allergies / important notes"
-                        className="input sm:col-span-3"
-                      />
-                      <div className="sm:col-span-3">
+                      <div className="sm:col-span-2">
                         <button className="btn-primary text-sm">+ Add Member</button>
                       </div>
                     </form>

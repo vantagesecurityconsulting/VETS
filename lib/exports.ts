@@ -55,15 +55,15 @@ export async function buildExport(type: string): Promise<Export | null> {
     }
     case "family_members": {
       const { rows } = await sql`
-        SELECT cl.client_id, cl.name AS household, fm.name, fm.date_of_birth, fm.gender,
-               fm.contact, fm.email, fm.address, fm.service_number, fm.notes
+        SELECT cl.client_id, cl.name AS household, fm.name, fm.relation,
+               fm.date_of_birth, fm.gender
         FROM family_members fm
         JOIN clients cl ON cl.id = fm.client_id
         ORDER BY cl.name, fm.id;
       `;
       return {
-        headers: ["Client ID", "Household", "Member Name", "Date of Birth", "Gender", "Contact", "Email", "Address", "Service Number", "Allergies / Notes"],
-        rows: rows.map((r) => [r.client_id, r.household, r.name, r.date_of_birth ? String(r.date_of_birth) : "", r.gender, r.contact, r.email, r.address, r.service_number, r.notes]),
+        headers: ["Client ID", "Household", "Member Name", "Relation", "Date of Birth", "Gender"],
+        rows: rows.map((r) => [r.client_id, r.household, r.name, r.relation, r.date_of_birth ? String(r.date_of_birth) : "", r.gender]),
       };
     }
     case "inventory": {

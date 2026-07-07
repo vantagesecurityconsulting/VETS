@@ -174,11 +174,7 @@ export interface FamilyMember {
   name: string | null;
   dateOfBirth: string | null;
   gender: string | null;
-  address: string | null;
-  contact: string | null;
-  email: string | null;
-  serviceNumber: string | null;
-  notes: string | null;
+  relation: string | null;
 }
 
 export async function getFamilyMembersAction(
@@ -186,7 +182,7 @@ export async function getFamilyMembersAction(
 ): Promise<FamilyMember[]> {
   await requirePermission("clients");
   const { rows } = await sql`
-    SELECT id, name, date_of_birth, gender, address, contact, email, service_number, notes
+    SELECT id, name, date_of_birth, gender, relation
     FROM family_members WHERE client_id = ${clientId} ORDER BY id;
   `;
   return rows.map((r) => ({
@@ -194,11 +190,7 @@ export async function getFamilyMembersAction(
     name: r.name,
     dateOfBirth: r.date_of_birth ? String(r.date_of_birth) : null,
     gender: r.gender,
-    address: r.address,
-    contact: r.contact,
-    email: r.email,
-    serviceNumber: r.service_number,
-    notes: r.notes,
+    relation: r.relation,
   }));
 }
 
@@ -214,11 +206,9 @@ export async function addFamilyMemberAction(
   };
   await sql`
     INSERT INTO family_members
-      (client_id, name, date_of_birth, gender, address, contact, email, service_number, notes)
+      (client_id, name, date_of_birth, gender, relation)
     VALUES (
-      ${clientId}, ${get("name")}, ${get("dob")}::date, ${get("gender")},
-      ${get("address")}, ${get("contact")}, ${get("email")},
-      ${get("serviceNumber")}, ${get("notes")}
+      ${clientId}, ${get("name")}, ${get("dob")}::date, ${get("gender")}, ${get("relation")}
     );
   `;
   revalidatePath("/dashboard/admin/clients");

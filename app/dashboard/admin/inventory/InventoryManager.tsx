@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { WEIGHT_UNIT } from "@/lib/units";
 import { updateInventoryAction } from "./actions";
@@ -15,7 +15,7 @@ export interface InvRow {
   expiryDate: string | null;
 }
 
-type Sort = "name" | "expiry" | "low";
+type Sort = "category" | "expiry" | "low";
 
 function stockBadge(qty: number, low: number) {
   if (qty <= 0) return { label: "Out", cls: "bg-military/15 text-military" };
@@ -36,44 +36,60 @@ function expiryClass(expiry: string | null, thresholdDays: number) {
 export default function InventoryManager({ rows }: { rows: InvRow[] }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
-  const [sort, setSort] = useState<Sort>("name");
+  const [sort, setSort] = useState<Sort>("category");
   const [lowThreshold, setLowThreshold] = useState(5);
   const [expiryThreshold, setExpiryThreshold] = useState(7);
   const [editId, setEditId] = useState<number | null>(null);
 
-  const filtered = useMemo(() => {
+  // Rows matching the search box (grouping/sorting applied below).
+  const matched = useMemo(() => {
     const q = search.trim().toLowerCase();
-    let list = rows.filter(
+    if (!q) return rows;
+    return rows.filter(
       (r) =>
         r.itemName.toLowerCase().includes(q) ||
         r.categoryName.toLowerCase().includes(q)
     );
-    if (sort === "name") {
-      list = [...list].sort((a, b) =>
-        `${a.categoryName}${a.itemName}`.localeCompare(
-          `${b.categoryName}${b.itemName}`
-        )
-      );
-    } else if (sort === "expiry") {
-      list = [...list].sort((a, b) => {
+  }, [rows, search]);
+
+  // Grouped by category (A–Z), items alphabetical within each category.
+  const groups = useMemo(() => {
+    const map = new Map<string, InvRow[]>();
+    for (const r of matched) {
+      const list = map.get(r.categoryName) ?? [];
+      list.push(r);
+      map.set(r.categoryName, list);
+    }
+    return Array.from(map.keys())
+      .sort((a, b) => a.localeCompare(b))
+      .map((category) => ({
+        category,
+        items: map
+          .get(category)!
+          .slice()
+          .sort((a, b) => a.itemName.localeCompare(b.itemName)),
+      }));
+  }, [matched]);
+
+  // Flat list for the expiry / low-stock sorts.
+  const flatSorted = useMemo(() => {
+    const list = matched.slice();
+    if (sort === "expiry") {
+      list.sort((a, b) => {
         if (!a.expiryDate) return 1;
         if (!b.expiryDate) return -1;
         return a.expiryDate.localeCompare(b.expiryDate);
       });
     } else if (sort === "low") {
-      list = [...list].sort((a, b) => a.quantity - b.quantity);
+      list.sort((a, b) => a.quantity - b.quantity);
     }
     return list;
-  }, [rows, search, sort]);
+  }, [matched, sort]);
 
   // Total value of ALL current stock (for insurance) — independent of search.
   const totalValue = useMemo(
     () => rows.reduce((sum, r) => sum + r.quantity * r.unitPrice, 0),
     [rows]
-  );
-  const filteredValue = useMemo(
-    () => filtered.reduce((sum, r) => sum + r.quantity * r.unitPrice, 0),
-    [filtered]
   );
   const totalWeight = useMemo(
     () => rows.reduce((sum, r) => sum + r.quantity * r.unitWeight, 0),
@@ -83,11 +99,97 @@ export default function InventoryManager({ rows }: { rows: InvRow[] }) {
   const money = (n: number) =>
     n.toLocaleString("en-CA", { style: "currency", currency: "CAD" });
 
+  const renderRow = (r: InvRow, showCat: boolean) => {
+    const badge = stockBadge(r.quantity, lowThreshold);
+    if (editId === r.itemId) {
+      return (
+        <tr key={r.itemId} className="border-t border-black/5 bg-navy/5">
+          <td colSpan={9} className="px-3 py-2">
+            <form
+              action={async (fd) => {
+                await updateInventoryAction(fd);
+                setEditId(null);
+                router.refresh();
+              }}
+              className="flex flex-wrap items-end gap-2"
+            >
+              <input type="hidden" name="itemId" value={r.itemId} />
+              <span className="font-semibold text-navy">
+                {r.categoryName} — {r.itemName}
+              </span>
+              <div>
+                <label className="label">Quantity</label>
+                <input
+                  name="quantity"
+                  type="number"
+                  min={0}
+                  defaultValue={r.quantity}
+                  className="input w-24"
+                />
+              </div>
+              <div>
+                <label className="label">Expiry</label>
+                <input
+                  name="expiry"
+                  type="date"
+                  defaultValue={r.expiryDate ?? ""}
+                  className="input"
+                />
+              </div>
+              <button className="btn-primary">Save</button>
+              <button
+                type="button"
+                onClick={() => setEditId(null)}
+                className="btn-outline"
+              >
+                Cancel
+              </button>
+            </form>
+          </td>
+        </tr>
+      );
+    }
+    return (
+      <tr key={r.itemId} className="border-t border-black/5">
+        <td className="px-3 py-2 text-charcoal/70">{showCat ? r.categoryName : ""}</td>
+        <td className="px-3 py-2 font-medium">{r.itemName}</td>
+        <td className="px-3 py-2 font-bold text-navy">{r.quantity}</td>
+        <td className="px-3 py-2 text-charcoal/70">{money(r.unitPrice)}</td>
+        <td className="px-3 py-2 font-semibold text-navy">
+          {money(r.quantity * r.unitPrice)}
+        </td>
+        <td className="px-3 py-2 text-charcoal/70">
+          {(r.quantity * r.unitWeight).toLocaleString("en-CA", {
+            maximumFractionDigits: 1,
+          })}{" "}
+          {WEIGHT_UNIT}
+        </td>
+        <td className="px-3 py-2">
+          <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${badge.cls}`}>
+            {badge.label}
+          </span>
+        </td>
+        <td className={`px-3 py-2 ${expiryClass(r.expiryDate, expiryThreshold)}`}>
+          {r.expiryDate ?? "—"}
+        </td>
+        <td className="px-3 py-2 text-right">
+          <button
+            onClick={() => setEditId(r.itemId)}
+            className="btn-outline px-3 py-1 text-xs"
+          >
+            Edit
+          </button>
+        </td>
+      </tr>
+    );
+  };
+
   return (
     <div>
       <h1 className="font-heading text-2xl font-bold text-navy">Inventory</h1>
       <p className="mt-1 text-charcoal/70">
-        Edit stock levels and expiry dates. Colours flag low stock and expiry.
+        Grouped by category and listed alphabetically. Edit stock levels and
+        expiry dates. Colours flag low stock and expiry.
       </p>
 
       {/* Total inventory value + weight (for insurance / gov records) */}
@@ -132,7 +234,7 @@ export default function InventoryManager({ rows }: { rows: InvRow[] }) {
             value={sort}
             onChange={(e) => setSort(e.target.value as Sort)}
           >
-            <option value="name">By name</option>
+            <option value="category">By category (A–Z)</option>
             <option value="expiry">Soonest expiry</option>
             <option value="low">Lowest stock</option>
           </select>
@@ -175,87 +277,24 @@ export default function InventoryManager({ rows }: { rows: InvRow[] }) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((r) => {
-              const badge = stockBadge(r.quantity, lowThreshold);
-              return editId === r.itemId ? (
-                <tr key={r.itemId} className="border-t border-black/5 bg-navy/5">
-                  <td colSpan={9} className="px-3 py-2">
-                    <form
-                      action={async (fd) => {
-                        await updateInventoryAction(fd);
-                        setEditId(null);
-                        router.refresh();
-                      }}
-                      className="flex flex-wrap items-end gap-2"
-                    >
-                      <input type="hidden" name="itemId" value={r.itemId} />
-                      <span className="font-semibold text-navy">
-                        {r.categoryName} — {r.itemName}
-                      </span>
-                      <div>
-                        <label className="label">Quantity</label>
-                        <input
-                          name="quantity"
-                          type="number"
-                          min={0}
-                          defaultValue={r.quantity}
-                          className="input w-24"
-                        />
-                      </div>
-                      <div>
-                        <label className="label">Expiry</label>
-                        <input
-                          name="expiry"
-                          type="date"
-                          defaultValue={r.expiryDate ?? ""}
-                          className="input"
-                        />
-                      </div>
-                      <button className="btn-primary">Save</button>
-                      <button
-                        type="button"
-                        onClick={() => setEditId(null)}
-                        className="btn-outline"
+            {sort === "category"
+              ? groups.map((g) => (
+                  <Fragment key={g.category}>
+                    <tr className="border-t border-black/10 bg-navy/5">
+                      <td
+                        colSpan={9}
+                        className="px-3 py-2 font-heading text-sm font-bold uppercase tracking-wide text-navy"
                       >
-                        Cancel
-                      </button>
-                    </form>
-                  </td>
-                </tr>
-              ) : (
-                <tr key={r.itemId} className="border-t border-black/5">
-                  <td className="px-3 py-2 text-charcoal/70">{r.categoryName}</td>
-                  <td className="px-3 py-2 font-medium">{r.itemName}</td>
-                  <td className="px-3 py-2 font-bold text-navy">{r.quantity}</td>
-                  <td className="px-3 py-2 text-charcoal/70">{money(r.unitPrice)}</td>
-                  <td className="px-3 py-2 font-semibold text-navy">
-                    {money(r.quantity * r.unitPrice)}
-                  </td>
-                  <td className="px-3 py-2 text-charcoal/70">
-                    {(r.quantity * r.unitWeight).toLocaleString("en-CA", {
-                      maximumFractionDigits: 1,
-                    })}{" "}
-                    {WEIGHT_UNIT}
-                  </td>
-                  <td className="px-3 py-2">
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${badge.cls}`}>
-                      {badge.label}
-                    </span>
-                  </td>
-                  <td className={`px-3 py-2 ${expiryClass(r.expiryDate, expiryThreshold)}`}>
-                    {r.expiryDate ?? "—"}
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    <button
-                      onClick={() => setEditId(r.itemId)}
-                      className="btn-outline px-3 py-1 text-xs"
-                    >
-                      Edit
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
+                        {g.category}{" "}
+                        <span className="font-normal normal-case text-charcoal/40">
+                          ({g.items.length})
+                        </span>
+                      </td>
+                    </tr>
+                    {g.items.map((r) => renderRow(r, false))}
+                  </Fragment>
+                ))
+              : flatSorted.map((r) => renderRow(r, true))}
           </tbody>
         </table>
       </div>
