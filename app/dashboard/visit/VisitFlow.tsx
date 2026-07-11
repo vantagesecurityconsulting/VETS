@@ -66,7 +66,13 @@ export default function VisitFlow({
   const itemIndex = useMemo(() => {
     const idx = new Map<
       number,
-      { name: string; pointValue: number; quantity: number; category: string }
+      {
+        name: string;
+        pointValue: number;
+        quantity: number;
+        category: string;
+        shopLimit: number | null;
+      }
     >();
     for (const cat of catalog) {
       for (const it of cat.items) {
@@ -75,6 +81,7 @@ export default function VisitFlow({
           pointValue: cat.pointValue,
           quantity: it.quantity,
           category: cat.name,
+          shopLimit: it.shopLimit,
         });
       }
     }
@@ -117,10 +124,12 @@ export default function VisitFlow({
   };
 
   const setQty = (itemId: number, qty: number) => {
+    const limit = itemIndex.get(itemId)?.shopLimit ?? null;
+    const capped = limit != null ? Math.min(qty, limit) : qty;
     setCart((prev) => {
       const next = { ...prev };
-      if (qty <= 0) delete next[itemId];
-      else next[itemId] = qty;
+      if (capped <= 0) delete next[itemId];
+      else next[itemId] = capped;
       return next;
     });
   };
@@ -350,6 +359,7 @@ export default function VisitFlow({
                         }`}
                       >
                         {out ? "Out of stock" : `${it.quantity} in stock`}
+                        {it.shopLimit ? ` · limit ${it.shopLimit}/visit` : ""}
                       </p>
                     </div>
                     <div className="flex items-center gap-1.5">
@@ -365,7 +375,8 @@ export default function VisitFlow({
                       </span>
                       <button
                         onClick={() => setQty(it.id, qty + 1)}
-                        className="h-8 w-8 rounded-md bg-navy text-lg font-bold text-white shadow-sm"
+                        disabled={it.shopLimit != null && qty >= it.shopLimit}
+                        className="h-8 w-8 rounded-md bg-navy text-lg font-bold text-white shadow-sm disabled:opacity-30"
                       >
                         +
                       </button>

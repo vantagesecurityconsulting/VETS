@@ -66,10 +66,10 @@ export async function confirmVisitAction(
     return { success: false, error: "No items selected." };
   }
 
-  // Look up point values (snapshot) for each item via its category.
+  // Look up point values (snapshot) and shop limits for each item.
   const itemIds = cleanLines.map((l) => l.itemId);
   const { rows: itemRows } = await sql.query(
-    `SELECT i.id AS item_id, c.point_value
+    `SELECT i.id AS item_id, i.name, i.shop_limit, c.point_value
      FROM items i JOIN categories c ON c.id = i.category_id
      WHERE i.id = ANY($1::int[])`,
     [itemIds]
@@ -77,6 +77,20 @@ export async function confirmVisitAction(
   const pointMap = new Map<number, number>(
     itemRows.map((r) => [r.item_id, r.point_value])
   );
+  const limitMap = new Map<number, { limit: number | null; name: string }>(
+    itemRows.map((r) => [r.item_id, { limit: r.shop_limit, name: r.name }])
+  );
+
+  // Enforce per-item shop limits (backstop for the UI).
+  for (const l of cleanLines) {
+    const info = limitMap.get(l.itemId);
+    if (info && info.limit != null && l.quantity > info.limit) {
+      return {
+        success: false,
+        error: `${info.name} is limited to ${info.limit} per visit.`,
+      };
+    }
+  }
 
   let pointsUsed = 0;
   for (const l of cleanLines) {

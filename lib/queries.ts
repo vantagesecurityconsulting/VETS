@@ -6,6 +6,7 @@ export interface CatalogItem {
   name: string;
   quantity: number;
   expiryDate: string | null;
+  shopLimit: number | null;
 }
 
 export interface CatalogCategory {
@@ -31,6 +32,7 @@ export async function getCatalog(
       i.id AS item_id,
       i.name AS item_name,
       i.display_order AS item_order,
+      i.shop_limit,
       COALESCE(inv.quantity, 0) AS quantity,
       inv.expiry_date
     FROM categories c
@@ -57,6 +59,7 @@ export async function getCatalog(
       name: r.item_name,
       quantity: r.quantity,
       expiryDate: r.expiry_date ? String(r.expiry_date) : null,
+      shopLimit: r.shop_limit === null ? null : Number(r.shop_limit),
     });
   }
   return Array.from(map.values());

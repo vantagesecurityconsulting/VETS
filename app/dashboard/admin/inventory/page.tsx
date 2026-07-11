@@ -12,6 +12,7 @@ export default async function InventoryPage() {
       i.name AS item_name,
       i.unit_price,
       i.unit_weight,
+      i.shop_limit,
       c.name AS category_name,
       COALESCE(inv.quantity, 0) AS quantity,
       inv.expiry_date
@@ -28,6 +29,7 @@ export default async function InventoryPage() {
     quantity: r.quantity,
     unitPrice: Number(r.unit_price),
     unitWeight: Number(r.unit_weight),
+    shopLimit: r.shop_limit === null ? null : Number(r.shop_limit),
     expiryDate: r.expiry_date ? String(r.expiry_date) : null,
   }));
 

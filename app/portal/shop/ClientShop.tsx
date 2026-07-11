@@ -40,10 +40,10 @@ export default function ClientShop({
   const [done, setDone] = useState<{ pointsUsed: number } | null>(null);
 
   const itemIndex = useMemo(() => {
-    const idx = new Map<number, { name: string; pointValue: number; quantity: number; category: string }>();
+    const idx = new Map<number, { name: string; pointValue: number; quantity: number; category: string; shopLimit: number | null }>();
     for (const cat of catalog)
       for (const it of cat.items)
-        idx.set(it.id, { name: it.name, pointValue: cat.pointValue, quantity: it.quantity, category: cat.name });
+        idx.set(it.id, { name: it.name, pointValue: cat.pointValue, quantity: it.quantity, category: cat.name, shopLimit: it.shopLimit });
     return idx;
   }, [catalog]);
 
@@ -75,9 +75,11 @@ export default function ClientShop({
 
   const setQty = (itemId: number, qty: number) =>
     setCart((prev) => {
+      const limit = itemIndex.get(itemId)?.shopLimit ?? null;
+      const capped = limit != null ? Math.min(qty, limit) : qty;
       const next = { ...prev };
-      if (qty <= 0) delete next[itemId];
-      else next[itemId] = qty;
+      if (capped <= 0) delete next[itemId];
+      else next[itemId] = capped;
       return next;
     });
 
@@ -184,13 +186,14 @@ export default function ClientShop({
                       <p className="truncate text-sm font-medium text-charcoal">{it.name}</p>
                       <p className={`text-xs ${out ? "text-military" : "text-charcoal/50"}`}>
                         {out ? "Out of stock" : `${it.quantity} available`}
+                        {it.shopLimit ? ` · limit ${it.shopLimit}` : ""}
                       </p>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <button onClick={() => setQty(it.id, qty - 1)} disabled={qty <= 0}
                         className="h-8 w-8 rounded-md bg-white text-lg font-bold text-navy shadow-sm disabled:opacity-30">−</button>
                       <span className="w-6 text-center text-sm font-bold">{qty}</span>
-                      <button onClick={() => setQty(it.id, qty + 1)} disabled={out || qty >= it.quantity}
+                      <button onClick={() => setQty(it.id, qty + 1)} disabled={out || qty >= it.quantity || (it.shopLimit != null && qty >= it.shopLimit)}
                         className="h-8 w-8 rounded-md bg-navy text-lg font-bold text-white shadow-sm disabled:opacity-30">+</button>
                     </div>
                   </div>

@@ -12,6 +12,7 @@ export interface InvRow {
   quantity: number;
   unitPrice: number;
   unitWeight: number;
+  shopLimit: number | null;
   expiryDate: string | null;
 }
 
@@ -104,7 +105,7 @@ export default function InventoryManager({ rows }: { rows: InvRow[] }) {
     if (editId === r.itemId) {
       return (
         <tr key={r.itemId} className="border-t border-black/5 bg-navy/5">
-          <td colSpan={9} className="px-3 py-2">
+          <td colSpan={10} className="px-3 py-2">
             <form
               action={async (fd) => {
                 await updateInventoryAction(fd);
@@ -125,6 +126,17 @@ export default function InventoryManager({ rows }: { rows: InvRow[] }) {
                   min={0}
                   defaultValue={r.quantity}
                   className="input w-24"
+                />
+              </div>
+              <div>
+                <label className="label">Shop limit / visit</label>
+                <input
+                  name="shopLimit"
+                  type="number"
+                  min={1}
+                  defaultValue={r.shopLimit ?? ""}
+                  placeholder="No limit"
+                  className="input w-28"
                 />
               </div>
               <div>
@@ -169,6 +181,15 @@ export default function InventoryManager({ rows }: { rows: InvRow[] }) {
             {badge.label}
           </span>
         </td>
+        <td className="px-3 py-2">
+          {r.shopLimit ? (
+            <span className="rounded-full bg-navy/10 px-2 py-0.5 text-xs font-bold text-navy">
+              {r.shopLimit} max
+            </span>
+          ) : (
+            <span className="text-charcoal/30">—</span>
+          )}
+        </td>
         <td className={`px-3 py-2 ${expiryClass(r.expiryDate, expiryThreshold)}`}>
           {r.expiryDate ?? "—"}
         </td>
@@ -188,8 +209,9 @@ export default function InventoryManager({ rows }: { rows: InvRow[] }) {
     <div>
       <h1 className="font-heading text-2xl font-bold text-navy">Inventory</h1>
       <p className="mt-1 text-charcoal/70">
-        Grouped by category and listed alphabetically. Edit stock levels and
-        expiry dates. Colours flag low stock and expiry.
+        Grouped by category and listed alphabetically. Edit stock levels, expiry
+        dates, and a per-visit shop limit (max a client can take of one item).
+        Colours flag low stock and expiry.
       </p>
 
       {/* Total inventory value + weight (for insurance / gov records) */}
@@ -272,6 +294,7 @@ export default function InventoryManager({ rows }: { rows: InvRow[] }) {
               <th className="px-3 py-2">Value</th>
               <th className="px-3 py-2">Weight</th>
               <th className="px-3 py-2">Status</th>
+              <th className="px-3 py-2">Limit</th>
               <th className="px-3 py-2">Expiry</th>
               <th className="px-3 py-2"></th>
             </tr>
@@ -282,7 +305,7 @@ export default function InventoryManager({ rows }: { rows: InvRow[] }) {
                   <Fragment key={g.category}>
                     <tr className="border-t border-black/10 bg-navy/5">
                       <td
-                        colSpan={9}
+                        colSpan={10}
                         className="px-3 py-2 font-heading text-sm font-bold uppercase tracking-wide text-navy"
                       >
                         {g.category}{" "}

@@ -69,16 +69,16 @@ export async function buildExport(type: string): Promise<Export | null> {
     case "inventory": {
       const { rows } = await sql`
         SELECT c.name AS category, i.name AS item, COALESCE(inv.quantity, 0) AS qty,
-               i.unit_price, i.unit_weight, inv.expiry_date
+               i.unit_price, i.unit_weight, i.shop_limit, inv.expiry_date
         FROM items i
         JOIN categories c ON c.id = i.category_id
         LEFT JOIN inventory inv ON inv.item_id = i.id
         WHERE i.is_active = true
-        ORDER BY c.display_order, c.name, i.display_order, i.name;
+        ORDER BY c.name, i.name;
       `;
       return {
-        headers: ["Category", "Item", "Quantity", "Unit Price", "Unit Weight", "Total Value", "Total Weight", "Expiry"],
-        rows: rows.map((r) => [r.category, r.item, r.qty, Number(r.unit_price).toFixed(2), Number(r.unit_weight), (r.qty * Number(r.unit_price)).toFixed(2), (r.qty * Number(r.unit_weight)).toFixed(2), r.expiry_date ? String(r.expiry_date) : ""]),
+        headers: ["Category", "Item", "Quantity", "Unit Price", "Unit Weight", "Total Value", "Total Weight", "Shop Limit", "Expiry"],
+        rows: rows.map((r) => [r.category, r.item, r.qty, Number(r.unit_price).toFixed(2), Number(r.unit_weight), (r.qty * Number(r.unit_price)).toFixed(2), (r.qty * Number(r.unit_weight)).toFixed(2), r.shop_limit ?? "", r.expiry_date ? String(r.expiry_date) : ""]),
       };
     }
     case "transactions": {

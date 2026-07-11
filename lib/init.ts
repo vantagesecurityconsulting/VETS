@@ -49,6 +49,7 @@ export async function createTables(): Promise<void> {
       name TEXT NOT NULL,
       unit_price NUMERIC(10,2) NOT NULL DEFAULT 0,
       unit_weight NUMERIC(10,3) NOT NULL DEFAULT 0,
+      shop_limit INTEGER,
       display_order INTEGER NOT NULL DEFAULT 0,
       is_active BOOLEAN NOT NULL DEFAULT true,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -404,6 +405,8 @@ let initialized = false;
 export async function runMigrations(): Promise<void> {
   await sql`ALTER TABLE items ADD COLUMN IF NOT EXISTS unit_price NUMERIC(10,2) NOT NULL DEFAULT 0;`;
   await sql`ALTER TABLE items ADD COLUMN IF NOT EXISTS unit_weight NUMERIC(10,3) NOT NULL DEFAULT 0;`;
+  // Per-item shop limit (max quantity per visit; NULL = no limit).
+  await sql`ALTER TABLE items ADD COLUMN IF NOT EXISTS shop_limit INTEGER;`;
   // Allow the 'waste' transaction type (write-offs) on existing databases.
   await sql`ALTER TABLE transactions DROP CONSTRAINT IF EXISTS transactions_type_check;`;
   await sql`
