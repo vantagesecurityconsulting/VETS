@@ -17,6 +17,8 @@ const REPORTS = [
   { key: "waste", label: "Write-Offs" },
   { key: "most-needed", label: "Most Needed" },
   { key: "shopping-list", label: "Shopping List by Store" },
+  { key: "demographics", label: "Family Demographics" },
+  { key: "explorer", label: "Custom Filter" },
   { key: "client-activity", label: "Client Activity" },
   { key: "expenses", label: "Expenses" },
 ];

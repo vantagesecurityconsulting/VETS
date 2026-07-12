@@ -21,6 +21,8 @@ export interface OrderRow {
   contact: string | null;
   items: number;
   fulfilledBy: string | null;
+  giftCardRequested: boolean;
+  giftCardDetails: string | null;
 }
 
 const STATUS_CLASS: Record<string, string> = {
@@ -109,6 +111,15 @@ export default function OrdersManager({ orders }: { orders: OrderRow[] }) {
                   {(o.address || o.contact) && (
                     <p className="text-xs text-charcoal/50">
                       {[o.contact, o.address].filter(Boolean).join(" · ")}
+                    </p>
+                  )}
+                  {o.giftCardRequested && (
+                    <p className="mt-1 rounded-md bg-gold/15 px-2 py-1 text-xs font-semibold text-charcoal">
+                      🎁 Gift card requested
+                      {o.giftCardDetails ? `: ${o.giftCardDetails}` : ""}
+                      <span className="block text-[11px] font-normal text-charcoal/50">
+                        Not guaranteed — fill only if available.
+                      </span>
                     </p>
                   )}
                   {o.notes && <p className="mt-0.5 text-xs italic text-charcoal/60">“{o.notes}”</p>}

@@ -64,14 +64,17 @@ export interface OrderLineInput {
 
 export async function submitOrderAction(
   lines: OrderLineInput[],
-  notes: string
+  notes: string,
+  giftCardRequested = false,
+  giftCardDetails = ""
 ): Promise<PortalResult> {
   const session = await getClientSession();
   if (!session) {
     return { success: false, error: "Your session expired — please sign in again." };
   }
   const clean = lines.filter((l) => l.quantity > 0);
-  if (clean.length === 0) {
+  const wantsGiftCard = !!giftCardRequested;
+  if (clean.length === 0 && !wantsGiftCard) {
     return { success: false, error: "Add at least one item to your order." };
   }
 
@@ -99,8 +102,9 @@ export async function submitOrderAction(
   for (const l of clean) points += (pmap.get(l.itemId) ?? 0) * l.quantity;
 
   const { rows: orderRows } = await sql`
-    INSERT INTO orders (client_id, status, points_used, notes)
-    VALUES (${session.clientPk}, 'pending', ${points}, ${notes || null})
+    INSERT INTO orders (client_id, status, points_used, notes, gift_card_requested, gift_card_details)
+    VALUES (${session.clientPk}, 'pending', ${points}, ${notes || null},
+            ${wantsGiftCard}, ${wantsGiftCard ? (giftCardDetails.trim() || null) : null})
     RETURNING id;
   `;
   const orderId = orderRows[0].id as number;

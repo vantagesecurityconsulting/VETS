@@ -170,6 +170,8 @@ export async function createTables(): Promise<void> {
         CHECK (status IN ('pending', 'fulfilled', 'cancelled')),
       points_used INTEGER NOT NULL DEFAULT 0,
       notes TEXT,
+      gift_card_requested BOOLEAN NOT NULL DEFAULT false,
+      gift_card_details TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       fulfilled_at TIMESTAMPTZ,
       fulfilled_by INTEGER REFERENCES users(id) ON DELETE SET NULL
@@ -407,6 +409,9 @@ export async function runMigrations(): Promise<void> {
   await sql`ALTER TABLE items ADD COLUMN IF NOT EXISTS unit_weight NUMERIC(10,3) NOT NULL DEFAULT 0;`;
   // Per-item shop limit (max quantity per visit; NULL = no limit).
   await sql`ALTER TABLE items ADD COLUMN IF NOT EXISTS shop_limit INTEGER;`;
+  // Gift card request on delivery orders.
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS gift_card_requested BOOLEAN NOT NULL DEFAULT false;`;
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS gift_card_details TEXT;`;
   // Allow the 'waste' transaction type (write-offs) on existing databases.
   await sql`ALTER TABLE transactions DROP CONSTRAINT IF EXISTS transactions_type_check;`;
   await sql`

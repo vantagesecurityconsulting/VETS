@@ -34,6 +34,8 @@ export default function ClientShop({
   const router = useRouter();
   const [cart, setCart] = useState<Record<number, number>>({});
   const [notes, setNotes] = useState("");
+  const [giftCard, setGiftCard] = useState(false);
+  const [giftCardDetails, setGiftCardDetails] = useState("");
   const [search, setSearch] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -90,7 +92,7 @@ export default function ClientShop({
       itemId: Number(id),
       quantity: qty,
     }));
-    const res = await submitOrderAction(lines, notes);
+    const res = await submitOrderAction(lines, notes, giftCard, giftCardDetails);
     if (!res.success) {
       setError(res.error || "Could not submit your order.");
       setSubmitting(false);
@@ -117,7 +119,7 @@ export default function ClientShop({
             You&apos;ll keep this on your file.
           </p>
           <div className="mt-5 flex gap-2">
-            <button onClick={() => { setDone(null); setCart({}); setNotes(""); setSearch(""); router.refresh(); }} className="btn-primary">
+            <button onClick={() => { setDone(null); setCart({}); setNotes(""); setGiftCard(false); setGiftCardDetails(""); setSearch(""); router.refresh(); }} className="btn-primary">
               Start a New Order
             </button>
             <button onClick={logout} className="btn-outline">Sign Out</button>
@@ -204,6 +206,37 @@ export default function ClientShop({
         ))}
 
         <div className="card">
+          <label className="flex items-start gap-2">
+            <input
+              type="checkbox"
+              checked={giftCard}
+              onChange={(e) => setGiftCard(e.target.checked)}
+              className="mt-0.5 h-5 w-5"
+            />
+            <span className="text-sm font-semibold text-navy">
+              Request a gift card
+              <span className="block text-xs font-normal text-charcoal/60">
+                Let the food bank know if you&apos;re hoping for a gift card with
+                your order.
+              </span>
+            </span>
+          </label>
+          {giftCard && (
+            <textarea
+              className="input mt-3"
+              rows={2}
+              value={giftCardDetails}
+              onChange={(e) => setGiftCardDetails(e.target.value)}
+              placeholder="What are you looking for? (e.g. grocery store, gas, pharmacy)"
+            />
+          )}
+          <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+            ⚠️ Gift cards are not guaranteed — requests are filled only when
+            available.
+          </p>
+        </div>
+
+        <div className="card">
           <label className="label" htmlFor="notes">Notes for the food bank (optional)</label>
           <textarea id="notes" className="input" rows={2} value={notes}
             onChange={(e) => setNotes(e.target.value)} placeholder="e.g. delivery time preference, dietary needs" />
@@ -217,7 +250,7 @@ export default function ClientShop({
             <div><span className="block text-xs uppercase text-charcoal/50">Budget</span><span className="text-lg font-bold text-charcoal">{budget}</span></div>
             <div><span className="block text-xs uppercase text-charcoal/50">Left</span><span className={`text-lg font-bold ${over ? "text-military" : "text-green-700"}`}>{remaining}</span></div>
           </div>
-          <button onClick={submit} disabled={submitting || pointsUsed === 0 || over}
+          <button onClick={submit} disabled={submitting || (pointsUsed === 0 && !giftCard) || over}
             className="btn-primary disabled:opacity-50">
             {submitting ? "Sending…" : "Submit Order"}
           </button>

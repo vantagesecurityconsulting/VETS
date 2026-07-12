@@ -18,6 +18,8 @@ import {
   wasteReport,
   mostNeededReport,
   shoppingListReport,
+  familyDemographicsReport,
+  clientFilterReport,
   clientActivityReport,
   expensesReport,
   expenseTotal,
@@ -27,6 +29,7 @@ import {
 } from "@/lib/reports";
 import { WEIGHT_UNIT } from "@/lib/units";
 import ReportControls from "./ReportControls";
+import ClientFilterControls from "./ClientFilterControls";
 import PrintButton from "@/components/PrintButton";
 
 export const dynamic = "force-dynamic";
@@ -77,6 +80,10 @@ function fmtDate(v: any) {
   return v ? new Date(v).toLocaleString() : "—";
 }
 
+function number(n: number) {
+  return Number(n ?? 0).toLocaleString("en-CA");
+}
+
 function fmtMoney(v: any) {
   return Number(v ?? 0).toLocaleString("en-CA", {
     style: "currency",
@@ -93,7 +100,21 @@ function fmtWeight(v: any) {
 export default async function ReportsPage({
   searchParams,
 }: {
-  searchParams: { report?: string; range?: string; from?: string; to?: string };
+  searchParams: {
+    report?: string;
+    range?: string;
+    from?: string;
+    to?: string;
+    cstatus?: string;
+    member?: string;
+    children?: string;
+    allergy?: string;
+    delivery?: string;
+    coc?: string;
+    tos?: string;
+    minfam?: string;
+    maxfam?: string;
+  };
 }) {
   await requirePermission("reports");
 
@@ -350,6 +371,165 @@ export default async function ReportsPage({
               )}
             </div>
           )}
+        </>
+      );
+      break;
+    }
+    case "demographics": {
+      const d = await familyDemographicsReport();
+      const pct = (n: number) =>
+        d.totalFamilies > 0 ? Math.round((n / d.totalFamilies) * 100) : 0;
+      content = (
+        <>
+          <div className="mt-4 flex items-center justify-between print:hidden">
+            <p className="text-sm text-charcoal/60">
+              Snapshot of active families — with vs without children, age groups,
+              and member status.
+            </p>
+            <PrintButton />
+          </div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-4">
+            <div className="rounded-xl border border-navy/20 bg-navy/5 p-4">
+              <p className="text-3xl font-bold text-navy">{number(d.totalFamilies)}</p>
+              <p className="text-sm text-charcoal/60">Active families</p>
+            </div>
+            <div className="rounded-xl border border-navy/20 bg-navy/5 p-4">
+              <p className="text-3xl font-bold text-navy">{number(d.totalPeople)}</p>
+              <p className="text-sm text-charcoal/60">People (incl. family)</p>
+            </div>
+            <div className="rounded-xl border border-gold/30 bg-gold/10 p-4">
+              <p className="text-3xl font-bold text-navy">{number(d.withChildren)}</p>
+              <p className="text-sm text-charcoal/60">
+                Families with children ({pct(d.withChildren)}%)
+              </p>
+            </div>
+            <div className="rounded-xl border border-black/10 bg-offwhite p-4">
+              <p className="text-3xl font-bold text-navy">{number(d.withoutChildren)}</p>
+              <p className="text-sm text-charcoal/60">
+                Families without children ({pct(d.withoutChildren)}%)
+              </p>
+            </div>
+          </div>
+
+          <h2 className="mt-6 font-heading text-lg font-bold text-navy">
+            People by age group
+          </h2>
+          <Table
+            rows={d.ageGroups}
+            columns={[
+              { key: "label", label: "Age group" },
+              { key: "count", label: "People" },
+            ]}
+          />
+
+          <div className="mt-6 grid gap-6 lg:grid-cols-2">
+            <div>
+              <h2 className="mb-1 font-heading text-lg font-bold text-navy">
+                Member status
+              </h2>
+              <Table
+                rows={[
+                  { k: "Serving members", v: d.memberStatus.serving },
+                  { k: "Retired members", v: d.memberStatus.retired },
+                  { k: "Not specified", v: d.memberStatus.unspecified },
+                ]}
+                columns={[
+                  { key: "k", label: "Status" },
+                  { key: "v", label: "Families" },
+                ]}
+              />
+            </div>
+            <div>
+              <h2 className="mb-1 font-heading text-lg font-bold text-navy">
+                Family size
+              </h2>
+              <Table
+                rows={d.familySizes}
+                columns={[
+                  { key: "size", label: "People in household" },
+                  { key: "count", label: "Families" },
+                ]}
+              />
+            </div>
+          </div>
+        </>
+      );
+      break;
+    }
+    case "explorer": {
+      const filters = {
+        status: searchParams.cstatus,
+        memberStatus: searchParams.member,
+        children: searchParams.children,
+        allergy: searchParams.allergy,
+        delivery: searchParams.delivery,
+        codeOfConduct: searchParams.coc,
+        termsOfService: searchParams.tos,
+        minFamily: searchParams.minfam ? Number(searchParams.minfam) : null,
+        maxFamily: searchParams.maxfam ? Number(searchParams.maxfam) : null,
+      };
+      const result = await clientFilterReport(filters);
+      content = (
+        <>
+          <p className="mt-4 text-sm text-charcoal/60">
+            Build your own report — combine any filters below to answer questions
+            like &ldquo;how many serving families with children?&rdquo;
+          </p>
+          <ClientFilterControls />
+          <div className="mt-4 flex items-center justify-between print:hidden">
+            <div className="flex flex-wrap gap-3">
+              <span className="rounded-lg bg-navy/5 px-3 py-1.5 text-sm">
+                <span className="font-bold text-navy">{number(result.count)}</span>{" "}
+                families
+              </span>
+              <span className="rounded-lg bg-navy/5 px-3 py-1.5 text-sm">
+                <span className="font-bold text-navy">{number(result.people)}</span>{" "}
+                people
+              </span>
+              <span className="rounded-lg bg-gold/10 px-3 py-1.5 text-sm">
+                <span className="font-bold text-navy">{number(result.withChildren)}</span>{" "}
+                with children
+              </span>
+              <span className="rounded-lg bg-offwhite px-3 py-1.5 text-sm">
+                <span className="font-bold text-navy">{number(result.withoutChildren)}</span>{" "}
+                without
+              </span>
+            </div>
+            <PrintButton />
+          </div>
+          <Table
+            rows={result.rows}
+            columns={[
+              { key: "clientId", label: "Client ID" },
+              { key: "name", label: "Name" },
+              { key: "familySize", label: "Family" },
+              {
+                key: "hasChildren",
+                label: "Children",
+                format: (v) => (v ? "Yes" : "No"),
+              },
+              {
+                key: "memberStatus",
+                label: "Member",
+                format: (v) => (v ? String(v) : "—"),
+              },
+              {
+                key: "headAge",
+                label: "Head age",
+                format: (v) => (v === null ? "—" : v),
+              },
+              {
+                key: "hasAllergy",
+                label: "Allergy",
+                format: (v) => (v ? "⚠" : ""),
+              },
+              {
+                key: "deliveryApproved",
+                label: "Delivery",
+                format: (v) => (v ? "🚚" : ""),
+              },
+            ]}
+          />
         </>
       );
       break;

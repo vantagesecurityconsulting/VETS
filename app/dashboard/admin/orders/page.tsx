@@ -9,6 +9,7 @@ export default async function OrdersPage() {
 
   const { rows } = await sql`
     SELECT o.id, o.status, o.points_used, o.notes, o.created_at,
+           o.gift_card_requested, o.gift_card_details,
            cl.name AS client_name, cl.client_id, cl.address, cl.contact,
            u.name AS fulfilled_by,
            COALESCE(SUM(oi.quantity), 0)::int AS items
@@ -33,6 +34,8 @@ export default async function OrdersPage() {
     contact: r.contact,
     items: r.items,
     fulfilledBy: r.fulfilled_by,
+    giftCardRequested: r.gift_card_requested,
+    giftCardDetails: r.gift_card_details,
   }));
 
   return <OrdersManager orders={orders} />;

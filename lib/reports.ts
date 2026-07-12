@@ -264,6 +264,207 @@ export async function shoppingListReport(
   return { groups, unpriced, total };
 }
 
+// --------------------------- Family demographics ---------------------------
+
+// A family "has children" if the head or any member has a recorded birthdate
+// under 18. Reused by both the demographics summary and the client filter.
+const CHILD_EXPR = `(
+  (c.date_of_birth IS NOT NULL AND date_part('year', age(c.date_of_birth)) < 18)
+  OR EXISTS (
+    SELECT 1 FROM family_members fm
+    WHERE fm.client_id = c.id AND fm.date_of_birth IS NOT NULL
+      AND date_part('year', age(fm.date_of_birth)) < 18
+  )
+)`;
+
+export interface DemographicsReport {
+  totalFamilies: number;
+  totalPeople: number;
+  withChildren: number;
+  withoutChildren: number;
+  memberStatus: { serving: number; retired: number; unspecified: number };
+  ageGroups: { label: string; count: number }[];
+  familySizes: { size: number; count: number }[];
+}
+
+export async function familyDemographicsReport(): Promise<DemographicsReport> {
+  const { rows: famRows } = await sql.query(`
+    SELECT
+      COUNT(*)::int AS total,
+      COALESCE(SUM(family_size),0)::int AS people,
+      COUNT(*) FILTER (WHERE has_children)::int AS with_children,
+      COUNT(*) FILTER (WHERE NOT has_children)::int AS without_children,
+      COUNT(*) FILTER (WHERE member_status = 'serving')::int AS serving,
+      COUNT(*) FILTER (WHERE member_status = 'retired')::int AS retired,
+      COUNT(*) FILTER (WHERE member_status IS NULL OR member_status NOT IN ('serving','retired'))::int AS unspecified
+    FROM (
+      SELECT c.id, c.family_size, c.member_status, ${CHILD_EXPR} AS has_children
+      FROM clients c WHERE c.is_active = true
+    ) f;
+  `);
+
+  const { rows: ageRows } = await sql`
+    WITH people AS (
+      SELECT c.date_of_birth AS dob FROM clients c WHERE c.is_active = true
+      UNION ALL
+      SELECT fm.date_of_birth FROM family_members fm
+        JOIN clients c ON c.id = fm.client_id WHERE c.is_active = true
+    ),
+    aged AS (
+      SELECT CASE WHEN dob IS NULL THEN NULL ELSE date_part('year', age(dob)) END AS yrs
+      FROM people
+    )
+    SELECT
+      COUNT(*) FILTER (WHERE yrs < 5)::int AS a0,
+      COUNT(*) FILTER (WHERE yrs >= 5 AND yrs < 13)::int AS a1,
+      COUNT(*) FILTER (WHERE yrs >= 13 AND yrs < 18)::int AS a2,
+      COUNT(*) FILTER (WHERE yrs >= 18 AND yrs < 30)::int AS a3,
+      COUNT(*) FILTER (WHERE yrs >= 30 AND yrs < 45)::int AS a4,
+      COUNT(*) FILTER (WHERE yrs >= 45 AND yrs < 65)::int AS a5,
+      COUNT(*) FILTER (WHERE yrs >= 65)::int AS a6,
+      COUNT(*) FILTER (WHERE yrs IS NULL)::int AS unknown
+    FROM aged;
+  `;
+
+  const { rows: sizeRows } = await sql`
+    SELECT family_size AS size, COUNT(*)::int AS count
+    FROM clients WHERE is_active = true
+    GROUP BY family_size ORDER BY family_size;
+  `;
+
+  const a = ageRows[0];
+  return {
+    totalFamilies: famRows[0].total,
+    totalPeople: famRows[0].people,
+    withChildren: famRows[0].with_children,
+    withoutChildren: famRows[0].without_children,
+    memberStatus: {
+      serving: famRows[0].serving,
+      retired: famRows[0].retired,
+      unspecified: famRows[0].unspecified,
+    },
+    ageGroups: [
+      { label: "Under 5", count: a.a0 },
+      { label: "5–12", count: a.a1 },
+      { label: "13–17", count: a.a2 },
+      { label: "18–29", count: a.a3 },
+      { label: "30–44", count: a.a4 },
+      { label: "45–64", count: a.a5 },
+      { label: "65+", count: a.a6 },
+      { label: "Unknown (no birthdate)", count: a.unknown },
+    ],
+    familySizes: sizeRows.map((r) => ({ size: r.size, count: r.count })),
+  };
+}
+
+// ------------------------ Customizable client filter ------------------------
+
+export interface ClientFilters {
+  status?: string; // active | archived | all
+  memberStatus?: string; // serving | retired | unspecified | any
+  children?: string; // with | without | any
+  allergy?: string; // yes | no | any
+  delivery?: string; // yes | no | any
+  codeOfConduct?: string; // yes | no | any
+  termsOfService?: string; // yes | no | any
+  minFamily?: number | null;
+  maxFamily?: number | null;
+}
+
+export interface ClientFilterRow {
+  clientId: string;
+  name: string;
+  familySize: number;
+  memberStatus: string | null;
+  hasChildren: boolean;
+  hasAllergy: boolean;
+  deliveryApproved: boolean;
+  headAge: number | null;
+}
+
+export interface ClientFilterResult {
+  count: number;
+  people: number;
+  withChildren: number;
+  withoutChildren: number;
+  rows: ClientFilterRow[];
+}
+
+const yesNo = (v: string | undefined, col: string, conds: string[]) => {
+  if (v === "yes") conds.push(`c.${col} = true`);
+  else if (v === "no") conds.push(`c.${col} = false`);
+};
+
+export async function clientFilterReport(
+  f: ClientFilters
+): Promise<ClientFilterResult> {
+  const conds: string[] = [];
+  const params: unknown[] = [];
+
+  // Active / archived / all
+  if (f.status === "archived") conds.push("c.is_active = false");
+  else if (f.status !== "all") conds.push("c.is_active = true");
+
+  if (f.memberStatus === "serving" || f.memberStatus === "retired") {
+    params.push(f.memberStatus);
+    conds.push(`c.member_status = $${params.length}`);
+  } else if (f.memberStatus === "unspecified") {
+    conds.push(
+      "(c.member_status IS NULL OR c.member_status NOT IN ('serving','retired'))"
+    );
+  }
+
+  if (f.children === "with") conds.push(CHILD_EXPR);
+  else if (f.children === "without") conds.push(`NOT ${CHILD_EXPR}`);
+
+  yesNo(f.allergy, "has_allergy", conds);
+  yesNo(f.delivery, "delivery_approved", conds);
+  yesNo(f.codeOfConduct, "code_of_conduct", conds);
+  yesNo(f.termsOfService, "terms_of_service", conds);
+
+  if (f.minFamily != null) {
+    params.push(f.minFamily);
+    conds.push(`c.family_size >= $${params.length}`);
+  }
+  if (f.maxFamily != null) {
+    params.push(f.maxFamily);
+    conds.push(`c.family_size <= $${params.length}`);
+  }
+
+  const where = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
+  const { rows } = await sql.query(
+    `SELECT c.client_id, c.name, c.family_size, c.member_status,
+            c.has_allergy, c.delivery_approved,
+            ${CHILD_EXPR} AS has_children,
+            CASE WHEN c.date_of_birth IS NULL THEN NULL
+                 ELSE date_part('year', age(c.date_of_birth))::int END AS head_age
+     FROM clients c
+     ${where}
+     ORDER BY c.name
+     LIMIT 2000`,
+    params
+  );
+
+  const mapped: ClientFilterRow[] = rows.map((r) => ({
+    clientId: r.client_id,
+    name: r.name,
+    familySize: r.family_size,
+    memberStatus: r.member_status,
+    hasChildren: r.has_children,
+    hasAllergy: r.has_allergy,
+    deliveryApproved: r.delivery_approved,
+    headAge: r.head_age === null ? null : Number(r.head_age),
+  }));
+
+  return {
+    count: mapped.length,
+    people: mapped.reduce((s, r) => s + (r.familySize || 0), 0),
+    withChildren: mapped.filter((r) => r.hasChildren).length,
+    withoutChildren: mapped.filter((r) => !r.hasChildren).length,
+    rows: mapped,
+  };
+}
+
 // Client visit frequency + inactivity. Not date-filtered (lifetime view).
 export async function clientActivityReport(inactiveDays = 60) {
   const { rows } = await sql`
