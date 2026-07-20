@@ -25,6 +25,7 @@ export default function VisitFlow({
   const [searching, startSearch] = useTransition();
   const [client, setClient] = useState<ClientRecord | null>(preselect ?? null);
   const [monthWarning, setMonthWarning] = useState<string | null>(null);
+  const [openCats, setOpenCats] = useState<Set<number>>(new Set());
 
   // If we arrived from an appointment with a client already chosen, run the
   // once-a-month check for them right away.
@@ -133,6 +134,18 @@ export default function VisitFlow({
       return next;
     });
   };
+
+  const searchActive = itemSearch.trim() !== "";
+  const isOpen = (id: number) => searchActive || openCats.has(id);
+  const toggleCat = (id: number) =>
+    setOpenCats((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  const expandAll = () => setOpenCats(new Set(catalog.map((c) => c.id)));
+  const collapseAll = () => setOpenCats(new Set());
 
   const confirm = async () => {
     if (!client) return;
@@ -322,21 +335,48 @@ export default function VisitFlow({
         onChange={(e) => setItemSearch(e.target.value)}
       />
 
-      <div className="mt-5 space-y-5">
+      {!searchActive && (
+        <div className="mt-3 flex gap-2">
+          <button onClick={expandAll} className="btn-outline text-sm">Expand all</button>
+          <button onClick={collapseAll} className="btn-outline text-sm">Collapse all</button>
+          <span className="self-center text-xs text-charcoal/50">
+            Tap a category to open it.
+          </span>
+        </div>
+      )}
+
+      <div className="mt-5 space-y-3">
         {filteredCatalog.length === 0 && (
           <p className="text-sm text-charcoal/50">No items match “{itemSearch}”.</p>
         )}
-        {filteredCatalog.map((cat) => (
+        {filteredCatalog.map((cat) => {
+          const open = isOpen(cat.id);
+          const inCart = cat.items.reduce((n, it) => n + (cart[it.id] ? 1 : 0), 0);
+          return (
           <div key={cat.id} className="card">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="font-heading text-lg font-bold text-navy">
-                {cat.name}
-              </h2>
+            <button
+              type="button"
+              onClick={() => toggleCat(cat.id)}
+              className="flex w-full items-center justify-between gap-2 text-left"
+            >
+              <span className="flex items-center gap-2">
+                <span className="w-3 text-charcoal/50">{open ? "▾" : "▸"}</span>
+                <span className="font-heading text-lg font-bold text-navy">
+                  {cat.name}
+                </span>
+                <span className="text-sm text-charcoal/40">({cat.items.length})</span>
+                {inCart > 0 && (
+                  <span className="rounded-full bg-navy px-2 py-0.5 text-xs font-bold text-white">
+                    {inCart} in cart
+                  </span>
+                )}
+              </span>
               <span className="rounded-full bg-gold/15 px-3 py-1 text-xs font-bold uppercase tracking-wide text-gold">
                 {cat.pointValue} pt{cat.pointValue === 1 ? "" : "s"} each
               </span>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-2">
+            </button>
+            {open && (
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
               {cat.items.map((it) => {
                 const qty = cart[it.id] ?? 0;
                 const out = it.quantity <= 0;
@@ -385,8 +425,10 @@ export default function VisitFlow({
                 );
               })}
             </div>
+            )}
           </div>
-        ))}
+          );
+        })}
 
         {/* Gift cards given */}
         <div className="card">
