@@ -41,6 +41,7 @@ export default function InventoryManager({ rows }: { rows: InvRow[] }) {
   const [lowThreshold, setLowThreshold] = useState(5);
   const [expiryThreshold, setExpiryThreshold] = useState(7);
   const [editId, setEditId] = useState<number | null>(null);
+  const [openCats, setOpenCats] = useState<Set<string>>(new Set());
 
   // Rows matching the search box (grouping/sorting applied below).
   const matched = useMemo(() => {
@@ -205,6 +206,18 @@ export default function InventoryManager({ rows }: { rows: InvRow[] }) {
     );
   };
 
+  const searchActive = search.trim() !== "";
+  const isOpen = (cat: string) => searchActive || openCats.has(cat);
+  const toggleCat = (cat: string) =>
+    setOpenCats((prev) => {
+      const n = new Set(prev);
+      if (n.has(cat)) n.delete(cat);
+      else n.add(cat);
+      return n;
+    });
+  const expandAll = () => setOpenCats(new Set(groups.map((g) => g.category)));
+  const collapseAll = () => setOpenCats(new Set());
+
   return (
     <div>
       <h1 className="font-heading text-2xl font-bold text-navy">Inventory</h1>
@@ -283,6 +296,20 @@ export default function InventoryManager({ rows }: { rows: InvRow[] }) {
         </div>
       </div>
 
+      {sort === "category" && !searchActive && (
+        <div className="mt-4 flex gap-2">
+          <button onClick={expandAll} className="btn-outline text-sm">
+            Expand all
+          </button>
+          <button onClick={collapseAll} className="btn-outline text-sm">
+            Collapse all
+          </button>
+          <span className="self-center text-xs text-charcoal/50">
+            Tap a category to open it.
+          </span>
+        </div>
+      )}
+
       <div className="mt-4 overflow-x-auto rounded-xl border border-black/5 bg-white shadow-sm">
         <table className="w-full text-sm">
           <thead className="bg-navy/5 text-left text-navy">
@@ -303,18 +330,24 @@ export default function InventoryManager({ rows }: { rows: InvRow[] }) {
             {sort === "category"
               ? groups.map((g) => (
                   <Fragment key={g.category}>
-                    <tr className="border-t border-black/10 bg-navy/5">
+                    <tr
+                      onClick={() => toggleCat(g.category)}
+                      className="cursor-pointer border-t border-black/10 bg-navy/5 hover:bg-navy/10"
+                    >
                       <td
                         colSpan={10}
                         className="px-3 py-2 font-heading text-sm font-bold uppercase tracking-wide text-navy"
                       >
+                        <span className="mr-1 inline-block w-3 text-charcoal/50">
+                          {isOpen(g.category) ? "▾" : "▸"}
+                        </span>
                         {g.category}{" "}
                         <span className="font-normal normal-case text-charcoal/40">
                           ({g.items.length})
                         </span>
                       </td>
                     </tr>
-                    {g.items.map((r) => renderRow(r, false))}
+                    {isOpen(g.category) && g.items.map((r) => renderRow(r, false))}
                   </Fragment>
                 ))
               : flatSorted.map((r) => renderRow(r, true))}
