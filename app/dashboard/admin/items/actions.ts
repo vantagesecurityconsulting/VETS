@@ -132,6 +132,60 @@ export async function toggleItemActiveAction(
   return { success: true };
 }
 
+/**
+ * Permanently delete an item. Refused if it appears in any past record
+ * (visits/donations/counts/orders) so history and reports stay intact —
+ * disable those instead. Safe deletes cascade to inventory & store prices.
+ */
+export async function deleteItemAction(id: number): Promise<ActionResult> {
+  await requirePermission("items");
+  if (!id) return { success: false, error: "Invalid item." };
+  const { rows } = await sql`
+    SELECT
+      (SELECT COUNT(*) FROM transaction_items WHERE item_id = ${id})::int AS txn,
+      (SELECT COUNT(*) FROM order_items WHERE item_id = ${id})::int AS ord;
+  `;
+  if ((rows[0].txn ?? 0) > 0 || (rows[0].ord ?? 0) > 0) {
+    return {
+      success: false,
+      error:
+        "This item appears in past visit, donation, or order records — deleting it would erase that history. Disable it instead to hide it from shopping.",
+    };
+  }
+  await sql`DELETE FROM items WHERE id = ${id};`;
+  revalidatePath(PATH);
+  revalidatePath("/dashboard/admin/inventory");
+  return { success: true };
+}
+
+/**
+ * Permanently delete a category and all its items. Refused if any of its
+ * items appear in past records. Safe deletes cascade to items, inventory,
+ * and store prices.
+ */
+export async function deleteCategoryAction(id: number): Promise<ActionResult> {
+  await requirePermission("items");
+  if (!id) return { success: false, error: "Invalid category." };
+  const { rows } = await sql`
+    SELECT
+      (SELECT COUNT(*) FROM transaction_items ti
+        JOIN items i ON i.id = ti.item_id WHERE i.category_id = ${id})::int AS txn,
+      (SELECT COUNT(*) FROM order_items oi
+        JOIN items i ON i.id = oi.item_id WHERE i.category_id = ${id})::int AS ord;
+  `;
+  if ((rows[0].txn ?? 0) > 0 || (rows[0].ord ?? 0) > 0) {
+    return {
+      success: false,
+      error:
+        "This category has items that appear in past records, so deleting it would erase that history. Disable those items instead.",
+    };
+  }
+  await sql`DELETE FROM categories WHERE id = ${id};`;
+  revalidatePath(PATH);
+  revalidatePath("/dashboard/admin/inventory");
+  return { success: true };
+}
+
 /** Swap display_order with the adjacent category (direction: -1 up, +1 down). */
 export async function moveCategoryAction(
   id: number,

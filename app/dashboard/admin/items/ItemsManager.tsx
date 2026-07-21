@@ -9,6 +9,8 @@ import {
   createItemAction,
   updateItemAction,
   toggleItemActiveAction,
+  deleteItemAction,
+  deleteCategoryAction,
   moveCategoryAction,
   moveItemAction,
   resetCatalogAction,
@@ -197,6 +199,19 @@ export default function ItemsManager({
                     <button onClick={() => setEditCat(cat.id)} className="btn-outline px-2 py-1 text-sm">
                       Edit
                     </button>
+                    <button
+                      onClick={() => {
+                        if (
+                          confirm(
+                            `Delete the "${cat.name}" category and all ${cat.items.length} of its items? This cannot be undone.`
+                          )
+                        )
+                          run(() => deleteCategoryAction(cat.id));
+                      }}
+                      className="rounded border border-military/40 px-2 py-1 text-sm font-semibold text-military hover:bg-military/5"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </>
               )}
@@ -310,6 +325,19 @@ export default function ItemsManager({
                               }`}
                             >
                               {it.isActive ? "Disable" : "Enable"}
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (
+                                  confirm(
+                                    `Delete "${it.name}"? This cannot be undone.`
+                                  )
+                                )
+                                  run(() => deleteItemAction(it.id));
+                              }}
+                              className="rounded border border-military/40 px-2 py-1 text-xs font-semibold text-military hover:bg-military/5"
+                            >
+                              Delete
                             </button>
                           </div>
                         </>
