@@ -62,14 +62,16 @@ export async function createItemAction(
   const name = String(formData.get("name") || "").trim();
   const unitPrice = Math.max(0, Number(formData.get("unitPrice")) || 0);
   const unitWeight = Math.max(0, Number(formData.get("unitWeight")) || 0);
+  const pointRaw = String(formData.get("pointValue") || "").trim();
+  const pointValue = pointRaw === "" ? null : Math.max(0, Number(pointRaw) || 0);
   if (!categoryId || !name) return { success: false, error: "Item name is required." };
 
   const { rows } = await sql`
     SELECT COALESCE(MAX(display_order), 0) + 1 AS next FROM items WHERE category_id = ${categoryId};
   `;
   const { rows: itemRows } = await sql`
-    INSERT INTO items (category_id, name, unit_price, unit_weight, display_order, is_active)
-    VALUES (${categoryId}, ${name}, ${unitPrice}, ${unitWeight}, ${rows[0].next}, true)
+    INSERT INTO items (category_id, name, unit_price, unit_weight, point_value, display_order, is_active)
+    VALUES (${categoryId}, ${name}, ${unitPrice}, ${unitWeight}, ${pointValue}, ${rows[0].next}, true)
     RETURNING id;
   `;
   await sql`INSERT INTO inventory (item_id, quantity) VALUES (${itemRows[0].id}, 0);`;
@@ -85,8 +87,10 @@ export async function updateItemAction(
   const name = String(formData.get("name") || "").trim();
   const unitPrice = Math.max(0, Number(formData.get("unitPrice")) || 0);
   const unitWeight = Math.max(0, Number(formData.get("unitWeight")) || 0);
+  const pointRaw = String(formData.get("pointValue") || "").trim();
+  const pointValue = pointRaw === "" ? null : Math.max(0, Number(pointRaw) || 0);
   if (!id || !name) return { success: false, error: "Name is required." };
-  await sql`UPDATE items SET name = ${name}, unit_price = ${unitPrice}, unit_weight = ${unitWeight} WHERE id = ${id};`;
+  await sql`UPDATE items SET name = ${name}, unit_price = ${unitPrice}, unit_weight = ${unitWeight}, point_value = ${pointValue} WHERE id = ${id};`;
   revalidatePath(PATH);
   return { success: true };
 }

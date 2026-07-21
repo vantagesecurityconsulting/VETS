@@ -38,6 +38,8 @@ export interface AdminItem {
   name: string;
   unitPrice: number;
   unitWeight: number;
+  pointValue: number | null; // per-item override (null = inherit category)
+  categoryPointValue: number;
   isActive: boolean;
   prices: StorePriceRow[];
 }
@@ -258,6 +260,16 @@ export default function ItemsManager({
                             title={`Weight per item (${WEIGHT_UNIT})`}
                           />
                           <span className="text-xs text-charcoal/50">{WEIGHT_UNIT}</span>
+                          <input
+                            name="pointValue"
+                            type="number"
+                            min={0}
+                            defaultValue={it.pointValue ?? ""}
+                            placeholder={`${it.categoryPointValue} pt`}
+                            className="input w-24"
+                            title="Credits/points for this item (blank = use category default)"
+                          />
+                          <span className="text-xs text-charcoal/50">pts</span>
                           <button className="btn-primary px-3 py-1.5 text-sm">Save</button>
                           <button
                             type="button"
@@ -285,6 +297,21 @@ export default function ItemsManager({
                             )}
                             <span className="ml-2 text-xs font-semibold text-charcoal/50">
                               {it.unitWeight} {WEIGHT_UNIT}
+                            </span>
+                            <span
+                              className={`ml-2 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                                it.pointValue != null
+                                  ? "bg-navy/15 text-navy"
+                                  : "bg-black/5 text-charcoal/50"
+                              }`}
+                              title={
+                                it.pointValue != null
+                                  ? "Custom points for this item"
+                                  : "Uses the category default"
+                              }
+                            >
+                              {it.pointValue ?? it.categoryPointValue} pt
+                              {it.pointValue != null ? " ✎" : ""}
                             </span>
                           </span>
                           <div className="flex gap-1">
@@ -446,6 +473,14 @@ export default function ItemsManager({
                     placeholder={`wt ${WEIGHT_UNIT}`}
                     className="input w-20"
                     title={`Weight per item (${WEIGHT_UNIT})`}
+                  />
+                  <input
+                    name="pointValue"
+                    type="number"
+                    min={0}
+                    placeholder={`${cat.pointValue} pt`}
+                    className="input w-20"
+                    title="Credits/points (blank = category default)"
                   />
                   <button className="btn-primary px-3 py-2 text-sm">+ Add Item</button>
                 </form>

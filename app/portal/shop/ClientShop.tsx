@@ -46,7 +46,7 @@ export default function ClientShop({
     const idx = new Map<number, { name: string; pointValue: number; quantity: number; category: string; shopLimit: number | null }>();
     for (const cat of catalog)
       for (const it of cat.items)
-        idx.set(it.id, { name: it.name, pointValue: cat.pointValue, quantity: it.quantity, category: cat.name, shopLimit: it.shopLimit });
+        idx.set(it.id, { name: it.name, pointValue: it.pointValue, quantity: it.quantity, category: cat.name, shopLimit: it.shopLimit });
     return idx;
   }, [catalog]);
 
@@ -214,7 +214,7 @@ export default function ClientShop({
                 )}
               </span>
               <span className="rounded-full bg-gold/15 px-3 py-1 text-xs font-bold uppercase text-gold">
-                {cat.pointValue} pt{cat.pointValue === 1 ? "" : "s"} each
+                default {cat.pointValue} pt{cat.pointValue === 1 ? "" : "s"}
               </span>
             </button>
             {open && (
@@ -225,7 +225,12 @@ export default function ClientShop({
                 return (
                   <div key={it.id} className={`flex items-center justify-between rounded-lg border p-2.5 ${qty > 0 ? "border-navy/40 bg-navy/5" : "border-black/5 bg-offwhite"}`}>
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-charcoal">{it.name}</p>
+                      <p className="truncate text-sm font-medium text-charcoal">
+                        {it.name}
+                        <span className="ml-2 rounded-full bg-navy/10 px-1.5 py-0.5 text-[10px] font-bold text-navy">
+                          {it.pointValue} pt{it.pointValue === 1 ? "" : "s"}
+                        </span>
+                      </p>
                       <p className={`text-xs ${out ? "text-military" : "text-charcoal/50"}`}>
                         {out ? "Out of stock" : `${it.quantity} available`}
                         {it.shopLimit ? ` · limit ${it.shopLimit}` : ""}

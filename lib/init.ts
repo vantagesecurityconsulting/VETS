@@ -50,6 +50,7 @@ export async function createTables(): Promise<void> {
       unit_price NUMERIC(10,2) NOT NULL DEFAULT 0,
       unit_weight NUMERIC(10,3) NOT NULL DEFAULT 0,
       shop_limit INTEGER,
+      point_value INTEGER,
       display_order INTEGER NOT NULL DEFAULT 0,
       is_active BOOLEAN NOT NULL DEFAULT true,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -409,6 +410,8 @@ export async function runMigrations(): Promise<void> {
   await sql`ALTER TABLE items ADD COLUMN IF NOT EXISTS unit_weight NUMERIC(10,3) NOT NULL DEFAULT 0;`;
   // Per-item shop limit (max quantity per visit; NULL = no limit).
   await sql`ALTER TABLE items ADD COLUMN IF NOT EXISTS shop_limit INTEGER;`;
+  // Per-item point/credit override (NULL = inherit the category's point value).
+  await sql`ALTER TABLE items ADD COLUMN IF NOT EXISTS point_value INTEGER;`;
   // Gift card request on delivery orders.
   await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS gift_card_requested BOOLEAN NOT NULL DEFAULT false;`;
   await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS gift_card_details TEXT;`;

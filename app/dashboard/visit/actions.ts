@@ -69,7 +69,8 @@ export async function confirmVisitAction(
   // Look up point values (snapshot) and shop limits for each item.
   const itemIds = cleanLines.map((l) => l.itemId);
   const { rows: itemRows } = await sql.query(
-    `SELECT i.id AS item_id, i.name, i.shop_limit, c.point_value
+    `SELECT i.id AS item_id, i.name, i.shop_limit,
+            COALESCE(i.point_value, c.point_value) AS point_value
      FROM items i JOIN categories c ON c.id = i.category_id
      WHERE i.id = ANY($1::int[])`,
     [itemIds]

@@ -61,7 +61,7 @@ export async function getCreditSnapshot(): Promise<CreditSnapshot> {
     FROM clients WHERE is_active = true;
   `;
   const { rows: stockRows } = await sql`
-    SELECT COALESCE(SUM(inv.quantity * c.point_value), 0)::int AS on_hand
+    SELECT COALESCE(SUM(inv.quantity * COALESCE(i.point_value, c.point_value)), 0)::int AS on_hand
     FROM inventory inv
     JOIN items i ON i.id = inv.item_id
     JOIN categories c ON c.id = i.category_id

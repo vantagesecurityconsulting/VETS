@@ -16,6 +16,7 @@ export default async function ItemsPage() {
       i.name AS item_name,
       i.unit_price,
       i.unit_weight,
+      i.point_value AS item_point_value,
       i.is_active,
       i.display_order AS item_order
     FROM categories c
@@ -41,6 +42,8 @@ export default async function ItemsPage() {
         name: r.item_name,
         unitPrice: Number(r.unit_price),
         unitWeight: Number(r.unit_weight),
+        pointValue: r.item_point_value === null ? null : Number(r.item_point_value),
+        categoryPointValue: Number(r.point_value),
         isActive: r.is_active,
         prices: [],
       });

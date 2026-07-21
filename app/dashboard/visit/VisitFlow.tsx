@@ -79,7 +79,7 @@ export default function VisitFlow({
       for (const it of cat.items) {
         idx.set(it.id, {
           name: it.name,
-          pointValue: cat.pointValue,
+          pointValue: it.pointValue,
           quantity: it.quantity,
           category: cat.name,
           shopLimit: it.shopLimit,
@@ -372,7 +372,7 @@ export default function VisitFlow({
                 )}
               </span>
               <span className="rounded-full bg-gold/15 px-3 py-1 text-xs font-bold uppercase tracking-wide text-gold">
-                {cat.pointValue} pt{cat.pointValue === 1 ? "" : "s"} each
+                default {cat.pointValue} pt{cat.pointValue === 1 ? "" : "s"}
               </span>
             </button>
             {open && (
@@ -392,6 +392,9 @@ export default function VisitFlow({
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-charcoal">
                         {it.name}
+                        <span className="ml-2 rounded-full bg-navy/10 px-1.5 py-0.5 text-[10px] font-bold text-navy">
+                          {it.pointValue} pt{it.pointValue === 1 ? "" : "s"}
+                        </span>
                       </p>
                       <p
                         className={`text-xs ${

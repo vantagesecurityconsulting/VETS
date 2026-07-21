@@ -7,12 +7,14 @@ export interface CatalogItem {
   quantity: number;
   expiryDate: string | null;
   shopLimit: number | null;
+  pointValue: number; // effective points (item override, else category default)
+  pointOverride: number | null; // the item-level override, if any
 }
 
 export interface CatalogCategory {
   id: number;
   name: string;
-  pointValue: number;
+  pointValue: number; // category default
   items: CatalogItem[];
 }
 
@@ -33,6 +35,7 @@ export async function getCatalog(
       i.name AS item_name,
       i.display_order AS item_order,
       i.shop_limit,
+      i.point_value AS item_point_value,
       COALESCE(inv.quantity, 0) AS quantity,
       inv.expiry_date
     FROM categories c
@@ -54,12 +57,15 @@ export async function getCatalog(
       };
       map.set(r.category_id, cat);
     }
+    const override = r.item_point_value === null ? null : Number(r.item_point_value);
     cat.items.push({
       id: r.item_id,
       name: r.item_name,
       quantity: r.quantity,
       expiryDate: r.expiry_date ? String(r.expiry_date) : null,
       shopLimit: r.shop_limit === null ? null : Number(r.shop_limit),
+      pointValue: override ?? Number(r.point_value),
+      pointOverride: override,
     });
   }
   return Array.from(map.values());
