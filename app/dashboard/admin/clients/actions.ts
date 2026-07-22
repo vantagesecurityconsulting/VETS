@@ -353,6 +353,38 @@ export interface VisitHistoryRow {
   volunteer: string | null;
 }
 
+export interface VisitItemRow {
+  itemName: string;
+  category: string;
+  quantity: number;
+  credits: number;
+  value: number;
+}
+
+/** Itemized breakdown of a single visit (what the client actually took). */
+export async function getVisitItemsAction(
+  transactionId: number
+): Promise<VisitItemRow[]> {
+  await requirePermission("clients");
+  const { rows } = await sql`
+    SELECT i.name AS item_name, c.name AS category, ti.quantity,
+           (ti.quantity * ti.point_value_at_time)::int AS credits,
+           ROUND(ti.quantity * i.unit_price, 2) AS value
+    FROM transaction_items ti
+    JOIN items i ON i.id = ti.item_id
+    JOIN categories c ON c.id = i.category_id
+    WHERE ti.transaction_id = ${transactionId}
+    ORDER BY c.name, i.name;
+  `;
+  return rows.map((r) => ({
+    itemName: r.item_name,
+    category: r.category,
+    quantity: r.quantity,
+    credits: r.credits,
+    value: Number(r.value),
+  }));
+}
+
 export async function getClientHistoryAction(
   clientId: number
 ): Promise<VisitHistoryRow[]> {

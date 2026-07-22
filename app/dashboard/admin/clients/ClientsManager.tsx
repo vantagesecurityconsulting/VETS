@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { Fragment, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   createClientAction,
@@ -9,6 +9,7 @@ import {
   reactivateClientAction,
   deleteClientAction,
   getClientHistoryAction,
+  getVisitItemsAction,
   getFamilyMembersAction,
   addFamilyMemberAction,
   deleteFamilyMemberAction,
@@ -19,6 +20,7 @@ import {
   addPickupAction,
   deletePickupAction,
   type VisitHistoryRow,
+  type VisitItemRow,
   type FamilyMember,
   type HolidayBasket,
   type AuthorizedPickup,
@@ -265,6 +267,8 @@ export default function ClientsManager({
 
   const [historyFor, setHistoryFor] = useState<number | null>(null);
   const [history, setHistory] = useState<VisitHistoryRow[]>([]);
+  const [visitItemsFor, setVisitItemsFor] = useState<number | null>(null);
+  const [visitItems, setVisitItems] = useState<VisitItemRow[]>([]);
   const [familyFor, setFamilyFor] = useState<number | null>(null);
   const [family, setFamily] = useState<FamilyMember[]>([]);
   const [basketsFor, setBasketsFor] = useState<number | null>(null);
@@ -331,14 +335,23 @@ export default function ClientsManager({
     setFamilyFor(null);
     setBasketsFor(null);
     setPickupsFor(null);
+    setVisitItemsFor(null);
   };
 
   const loadHistory = async (id: number) => {
     if (historyFor === id) return setHistoryFor(null);
     closePanels();
+    setVisitItemsFor(null);
     const rows = await getClientHistoryAction(id);
     setHistory(rows);
     setHistoryFor(id);
+  };
+
+  const loadVisitItems = async (transactionId: number) => {
+    if (visitItemsFor === transactionId) return setVisitItemsFor(null);
+    const rows = await getVisitItemsAction(transactionId);
+    setVisitItems(rows);
+    setVisitItemsFor(transactionId);
   };
 
   const loadFamily = async (id: number) => {
@@ -812,6 +825,17 @@ export default function ClientsManager({
                 {/* History panel */}
                 {historyFor === c.id && (
                   <div className="mt-3 border-t border-black/5 pt-3">
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="text-sm font-semibold text-navy">Visit History</p>
+                      <a
+                        href={`/dashboard/admin/clients/${c.id}/report`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-outline text-xs"
+                      >
+                        🖨 Full itemized report
+                      </a>
+                    </div>
                     {history.length === 0 ? (
                       <p className="text-sm text-charcoal/50">No visits yet.</p>
                     ) : (
@@ -822,16 +846,59 @@ export default function ClientsManager({
                             <th className="py-1">Items</th>
                             <th className="py-1">Credits</th>
                             <th className="py-1">Volunteer</th>
+                            <th className="py-1"></th>
                           </tr>
                         </thead>
                         <tbody>
                           {history.map((h) => (
-                            <tr key={h.transactionId} className="border-t border-black/5">
-                              <td className="py-1.5">{h.date}</td>
-                              <td className="py-1.5">{h.itemCount}</td>
-                              <td className="py-1.5">{h.pointsUsed}</td>
-                              <td className="py-1.5">{h.volunteer ?? "—"}</td>
-                            </tr>
+                            <Fragment key={h.transactionId}>
+                              <tr className="border-t border-black/5">
+                                <td className="py-1.5">{h.date}</td>
+                                <td className="py-1.5">{h.itemCount}</td>
+                                <td className="py-1.5">{h.pointsUsed}</td>
+                                <td className="py-1.5">{h.volunteer ?? "—"}</td>
+                                <td className="py-1.5 text-right">
+                                  <button
+                                    onClick={() => loadVisitItems(h.transactionId)}
+                                    className="rounded border border-navy/20 px-2 py-0.5 text-xs font-semibold text-navy"
+                                  >
+                                    {visitItemsFor === h.transactionId ? "Hide items" : "View items"}
+                                  </button>
+                                </td>
+                              </tr>
+                              {visitItemsFor === h.transactionId && (
+                                <tr>
+                                  <td colSpan={5} className="bg-offwhite px-3 py-2">
+                                    {visitItems.length === 0 ? (
+                                      <p className="text-xs text-charcoal/50">
+                                        No item detail recorded for this visit.
+                                      </p>
+                                    ) : (
+                                      <table className="w-full text-xs">
+                                        <thead>
+                                          <tr className="text-left text-charcoal/50">
+                                            <th className="py-0.5">Category</th>
+                                            <th className="py-0.5">Item</th>
+                                            <th className="py-0.5">Qty</th>
+                                            <th className="py-0.5">Credits</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {visitItems.map((it, i) => (
+                                            <tr key={i} className="border-t border-black/5">
+                                              <td className="py-0.5 text-charcoal/60">{it.category}</td>
+                                              <td className="py-0.5 font-medium">{it.itemName}</td>
+                                              <td className="py-0.5">{it.quantity}</td>
+                                              <td className="py-0.5">{it.credits}</td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    )}
+                                  </td>
+                                </tr>
+                              )}
+                            </Fragment>
                           ))}
                         </tbody>
                       </table>
