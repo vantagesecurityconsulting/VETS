@@ -31,6 +31,38 @@ import { WEIGHT_UNIT } from "@/lib/units";
 import ReportControls from "./ReportControls";
 import ClientFilterControls from "./ClientFilterControls";
 import PrintButton from "@/components/PrintButton";
+import { ORG_NAME, ORG_TAGLINE, CHARITY_REG_NUMBER } from "@/lib/org";
+
+const REPORT_TITLES: Record<string, string> = {
+  visits: "Client Visits",
+  "top-items": "Top Items",
+  inventory: "Inventory Levels",
+  donations: "Donations",
+  audit: "Audit / Discrepancy",
+  expiry: "Expiry",
+  volunteers: "Volunteer Activity",
+  points: "Points Usage",
+  "value-clients": "Value by Client",
+  "donations-by-donor": "Donations by Donor",
+  "gift-cards": "Gift Cards Given",
+  waste: "Write-Offs",
+  "most-needed": "Most Needed",
+  "shopping-list": "Shopping List by Store",
+  demographics: "Family Demographics",
+  explorer: "Custom Client Filter",
+  "client-activity": "Client Activity",
+  expenses: "Expenses",
+};
+
+// Reports that show a current snapshot rather than a date range.
+const SNAPSHOT_REPORTS = new Set([
+  "inventory",
+  "expiry",
+  "demographics",
+  "shopping-list",
+  "most-needed",
+  "client-activity",
+]);
 
 export const dynamic = "force-dynamic";
 
@@ -272,7 +304,6 @@ export default async function ReportsPage({
               recorded prices and grouped into one list per store. Items without
               a recorded price are listed separately.
             </p>
-            <PrintButton />
           </div>
           <div className="mt-3 rounded-xl border border-gold/30 bg-gold/10 p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-charcoal/60">
@@ -386,7 +417,6 @@ export default async function ReportsPage({
               Snapshot of active families — with vs without children, age groups,
               and member status.
             </p>
-            <PrintButton />
           </div>
           <div className="mt-3 grid gap-3 sm:grid-cols-4">
             <div className="rounded-xl border border-navy/20 bg-navy/5 p-4">
@@ -495,7 +525,6 @@ export default async function ReportsPage({
                 without
               </span>
             </div>
-            <PrintButton />
           </div>
           <Table
             rows={result.rows}
@@ -768,14 +797,43 @@ export default async function ReportsPage({
     }
   }
 
+  const reportTitle = REPORT_TITLES[report] || "Report";
+  const periodLabel = SNAPSHOT_REPORTS.has(report)
+    ? "Current snapshot"
+    : range.label;
+  const generatedOn = new Date().toLocaleString("en-CA", {
+    dateStyle: "long",
+    timeStyle: "short",
+  });
+
   return (
     <div>
-      <h1 className="font-heading text-2xl font-bold text-navy">Reports</h1>
-      <p className="mt-1 text-charcoal/70">
-        Showing <span className="font-semibold">{range.label}</span> (inventory
-        & expiry reports show current snapshot).
-      </p>
-      <div className="mt-4">
+      {/* Header shown only when printing / saving to PDF */}
+      <div className="hidden border-b border-navy/30 pb-3 print:block">
+        <p className="font-heading text-lg font-bold uppercase tracking-wide text-navy">
+          {ORG_NAME}
+        </p>
+        <p className="text-xs uppercase tracking-widest text-gold">{ORG_TAGLINE}</p>
+        <p className="mt-2 font-heading text-xl font-bold text-navy">
+          {reportTitle} — {periodLabel}
+        </p>
+        <p className="text-xs text-charcoal/60">
+          Generated {generatedOn} · Charity No. {CHARITY_REG_NUMBER}
+        </p>
+      </div>
+
+      <div className="flex flex-wrap items-start justify-between gap-3 print:hidden">
+        <div>
+          <h1 className="font-heading text-2xl font-bold text-navy">Reports</h1>
+          <p className="mt-1 text-charcoal/70">
+            Showing <span className="font-semibold">{range.label}</span>{" "}
+            (inventory &amp; expiry reports show current snapshot).
+          </p>
+        </div>
+        <PrintButton />
+      </div>
+
+      <div className="mt-4 print:hidden">
         <ReportControls
           report={report}
           range={rangeKey}

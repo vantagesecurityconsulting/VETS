@@ -40,3 +40,45 @@ body {
     @apply mb-1 block text-sm font-semibold text-navy;
   }
 }
+
+/* Print / Save-as-PDF styling (used by the Reports "Print / Save as PDF" button
+   and any window.print() screen). Keeps tables readable and colours intact. */
+@media print {
+  @page {
+    margin: 12mm;
+  }
+  html,
+  body {
+    background: #ffffff !important;
+  }
+  /* Preserve badge/background colours in the PDF. */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+  /* Don't split a table row across two pages. */
+  tr,
+  img {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  thead {
+    display: table-header-group; /* repeat headers on each printed page */
+  }
+  table {
+    width: 100% !important;
+    font-size: 11px;
+  }
+  .card {
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+  /* Let long tables/sections flow instead of scrolling in a fixed box. */
+  .overflow-x-auto {
+    overflow: visible !important;
+  }
+}
