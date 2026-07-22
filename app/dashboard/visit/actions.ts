@@ -3,6 +3,7 @@
 import { sql } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { searchClients, type ClientRecord } from "@/lib/queries";
+import { revalidatePath } from "next/cache";
 
 export async function searchClientsAction(
   term: string
@@ -128,6 +129,10 @@ export async function confirmVisitAction(
       VALUES (${transactionId}, ${g.store.trim() || null}, ${Math.max(0, g.amount || 0)});
     `;
   }
+
+  revalidatePath("/dashboard/admin/inventory");
+  revalidatePath("/dashboard/admin/reports");
+  revalidatePath("/dashboard/admin");
 
   return { success: true, transactionId, pointsUsed };
 }

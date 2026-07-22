@@ -2,6 +2,7 @@
 
 import { sql } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
+import { revalidatePath } from "next/cache";
 
 export interface WasteLineInput {
   itemId: number;
@@ -53,6 +54,10 @@ export async function logWasteAction(
       WHERE item_id = ${l.itemId};
     `;
   }
+
+  revalidatePath("/dashboard/admin/inventory");
+  revalidatePath("/dashboard/admin/reports");
+  revalidatePath("/dashboard/admin");
 
   return { success: true, totalItems: total };
 }

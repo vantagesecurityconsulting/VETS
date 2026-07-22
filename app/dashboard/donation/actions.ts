@@ -2,6 +2,7 @@
 
 import { sql } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
+import { revalidatePath } from "next/cache";
 
 export interface DonationLineInput {
   itemId: number;
@@ -115,6 +116,10 @@ export async function logDonationAction(
       `;
     }
   }
+
+  revalidatePath("/dashboard/admin/inventory");
+  revalidatePath("/dashboard/admin/reports");
+  revalidatePath("/dashboard/admin");
 
   return { success: true, totalItems: total };
 }

@@ -2,6 +2,7 @@
 
 import { sql } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
+import { revalidatePath } from "next/cache";
 
 export interface CountLineInput {
   itemId: number;
@@ -88,13 +89,27 @@ export async function submitCountAction(
       INSERT INTO transaction_items (transaction_id, item_id, quantity, point_value_at_time)
       VALUES (${transactionId}, ${l.itemId}, ${l.countedQuantity}, 0);
     `;
-    // A physical count is the source of truth — set inventory to the counted amount.
-    await sql`
+    // A physical count is the source of truth — set inventory to the counted
+    // amount. Fall back to an INSERT if the item has no inventory row yet, so a
+    // count can never silently fail to apply.
+    const upd = await sql`
       UPDATE inventory
       SET quantity = ${l.countedQuantity}, last_updated = now()
       WHERE item_id = ${l.itemId};
     `;
+    if (upd.rowCount === 0) {
+      await sql`
+        INSERT INTO inventory (item_id, quantity)
+        VALUES (${l.itemId}, ${l.countedQuantity});
+      `;
+    }
   }
+
+  // Refresh any cached views so the new counts show immediately for everyone.
+  revalidatePath("/dashboard/admin/inventory");
+  revalidatePath("/dashboard/count");
+  revalidatePath("/dashboard/admin/reports");
+  revalidatePath("/dashboard/admin");
 
   return { success: true, recorded: allLines.length, discrepancies };
 }
