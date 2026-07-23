@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { CatalogCategory } from "@/lib/queries";
+import { useUnsavedWarning } from "@/components/useUnsavedWarning";
 import {
   submitCountAction,
   type CountLineInput,
@@ -43,6 +44,8 @@ export default function CountForm({
       ).length,
     [counts, newItems]
   );
+
+  useUnsavedWarning(!done && entered > 0);
 
   const updateNew = (categoryId: number, patch: Partial<NewCountState>) => {
     setNewItems((prev) => ({

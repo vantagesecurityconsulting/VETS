@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import type { CatalogCategory, ClientRecord } from "@/lib/queries";
+import { useUnsavedWarning } from "@/components/useUnsavedWarning";
 import {
   searchClientsAction,
   confirmVisitAction,
@@ -101,6 +102,11 @@ export default function VisitFlow({
   const budget = client?.pointBudget ?? 0;
   const remaining = budget - pointsUsed;
   const overBudget = remaining < 0;
+
+  const hasCartWork =
+    Object.keys(cart).length > 0 ||
+    giftCards.some((g) => g.store.trim() !== "" || Number(g.amount) > 0);
+  useUnsavedWarning(step === "build" && !summary && hasCartWork);
 
   const filteredCatalog = useMemo(() => {
     const q = itemSearch.trim().toLowerCase();

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useUnsavedWarning } from "@/components/useUnsavedWarning";
 import type { CatalogCategory } from "@/lib/queries";
 import { logWasteAction, type WasteLineInput } from "./actions";
 
@@ -37,6 +38,8 @@ export default function WasteForm({
     () => Object.values(lines).reduce((s, n) => s + (n || 0), 0),
     [lines]
   );
+
+  useUnsavedWarning(!done && totalQty > 0);
 
   const setQty = (itemId: number, qty: number, max: number) => {
     setLines((prev) => {

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CatalogCategory } from "@/lib/queries";
 import { submitOrderAction, clientLogoutAction, type OrderLineInput } from "../actions";
+import { useUnsavedWarning } from "@/components/useUnsavedWarning";
 
 export interface RecentOrder {
   id: number;
@@ -61,6 +62,8 @@ export default function ClientShop({
 
   const remaining = budget - pointsUsed;
   const over = remaining < 0;
+
+  useUnsavedWarning(!done && (Object.keys(cart).length > 0 || giftCard));
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();

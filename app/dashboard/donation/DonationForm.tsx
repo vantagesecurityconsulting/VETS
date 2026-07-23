@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useUnsavedWarning } from "@/components/useUnsavedWarning";
 import type { CatalogCategory } from "@/lib/queries";
 import {
   logDonationAction,
@@ -66,6 +67,8 @@ export default function DonationForm({
       ),
     [lines, newItems]
   );
+
+  useUnsavedWarning(!done && totalQty > 0);
 
   const update = (itemId: number, patch: Partial<LineState>) => {
     setLines((prev) => ({
