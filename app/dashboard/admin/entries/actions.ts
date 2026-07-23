@@ -119,6 +119,57 @@ export async function updateEntryItemAction(
   return { success: true };
 }
 
+/**
+ * Add a missed item onto an existing entry (e.g. a client visit), adjusting
+ * inventory. If the item is already on the entry, its quantity is increased.
+ */
+export async function addEntryItemAction(
+  transactionId: number,
+  itemId: number,
+  quantity: number
+): Promise<ActionResult> {
+  await requirePermission("entries");
+  const qty = Math.max(1, Math.floor(quantity || 0));
+  if (!transactionId || !itemId) return { success: false, error: "Choose an item." };
+
+  const { rows: txn } = await sql`SELECT type FROM transactions WHERE id = ${transactionId};`;
+  if (txn.length === 0) return { success: false, error: "Entry not found." };
+  const type = txn[0].type as string;
+
+  // Credits only matter for client visits (stock_out); use the item's
+  // effective point value (its override, else the category default).
+  let pointValue = 0;
+  if (type === "stock_out") {
+    const { rows: pv } = await sql`
+      SELECT COALESCE(i.point_value, c.point_value) AS pv
+      FROM items i JOIN categories c ON c.id = i.category_id
+      WHERE i.id = ${itemId};
+    `;
+    pointValue = Number(pv[0]?.pv ?? 0);
+  }
+
+  const { rows: existing } = await sql`
+    SELECT id, quantity FROM transaction_items
+    WHERE transaction_id = ${transactionId} AND item_id = ${itemId};
+  `;
+  if (existing.length > 0) {
+    const oldQty = existing[0].quantity as number;
+    const newQty = oldQty + qty;
+    await adjustInventory(type, itemId, oldQty, newQty);
+    await sql`UPDATE transaction_items SET quantity = ${newQty} WHERE id = ${existing[0].id};`;
+  } else {
+    await adjustInventory(type, itemId, 0, qty);
+    await sql`
+      INSERT INTO transaction_items (transaction_id, item_id, quantity, point_value_at_time)
+      VALUES (${transactionId}, ${itemId}, ${qty}, ${pointValue});
+    `;
+  }
+
+  revalidatePath("/dashboard/admin/entries");
+  revalidatePath("/dashboard/admin/inventory");
+  return { success: true };
+}
+
 /** Remove a single line item, reversing its inventory effect. */
 export async function deleteEntryItemAction(
   rowId: number

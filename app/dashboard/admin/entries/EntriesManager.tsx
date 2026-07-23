@@ -1,12 +1,13 @@
 "use client";
 
-import { Fragment, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { Fragment, useEffect, useState, useTransition } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   deleteEntryAction,
   getEntryItemsAction,
   updateEntryItemAction,
   deleteEntryItemAction,
+  addEntryItemAction,
   type EntryItem,
 } from "./actions";
 
@@ -18,6 +19,12 @@ export interface EntryRow {
   client: string | null;
   items: number;
   detail: string;
+}
+
+export interface CatalogItemLite {
+  id: number;
+  name: string;
+  category: string;
 }
 
 const TYPE_LABEL: Record<string, string> = {
@@ -34,7 +41,13 @@ const TYPE_CLASS: Record<string, string> = {
   audit: "bg-gold/15 text-gold",
 };
 
-export default function EntriesManager({ entries }: { entries: EntryRow[] }) {
+export default function EntriesManager({
+  entries,
+  catalog,
+}: {
+  entries: EntryRow[];
+  catalog: CatalogItemLite[];
+}) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [filter, setFilter] = useState("all");
@@ -43,15 +56,66 @@ export default function EntriesManager({ entries }: { entries: EntryRow[] }) {
   const [items, setItems] = useState<EntryItem[]>([]);
   const [draft, setDraft] = useState<Record<number, string>>({});
 
+  // Add-a-missed-item state (for the currently open entry).
+  const [addSearch, setAddSearch] = useState("");
+  const [addSelected, setAddSelected] = useState<CatalogItemLite | null>(null);
+  const [addQty, setAddQty] = useState("1");
+
   const shown = entries.filter((e) => filter === "all" || e.type === filter);
+
+  const resetAdd = () => {
+    setAddSearch("");
+    setAddSelected(null);
+    setAddQty("1");
+  };
 
   const loadItems = async (id: number) => {
     if (openId === id) return setOpenId(null);
+    resetAdd();
     const rows = await getEntryItemsAction(id);
     setItems(rows);
     setDraft(Object.fromEntries(rows.map((r) => [r.id, String(r.quantity)])));
     setOpenId(id);
   };
+
+  const refreshOpen = async () => {
+    if (!openId) return;
+    const rows = await getEntryItemsAction(openId);
+    setItems(rows);
+    setDraft(Object.fromEntries(rows.map((r) => [r.id, String(r.quantity)])));
+  };
+
+  const addItem = () => {
+    if (!openId || !addSelected) return;
+    const q = Math.max(1, Number(addQty) || 1);
+    startTransition(async () => {
+      await addEntryItemAction(openId, addSelected.id, q);
+      await refreshOpen();
+      resetAdd();
+      router.refresh();
+    });
+  };
+
+  // Deep-link: /dashboard/admin/entries?open=<transactionId> opens that entry.
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const openParam = Number(searchParams.get("open"));
+    if (openParam && entries.some((e) => e.id === openParam)) {
+      loadItems(openParam);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const matches =
+    addSearch.trim() === ""
+      ? []
+      : catalog
+          .filter(
+            (c) =>
+              c.name.toLowerCase().includes(addSearch.toLowerCase()) ||
+              c.category.toLowerCase().includes(addSearch.toLowerCase())
+          )
+          .slice(0, 8);
 
   const saveItem = (rowId: number) => {
     const v = Math.max(0, Number(draft[rowId]) || 0);
@@ -107,9 +171,10 @@ export default function EntriesManager({ entries }: { entries: EntryRow[] }) {
         Entries &amp; Corrections
       </h1>
       <p className="mt-1 text-charcoal/70">
-        Review recent activity. Deleting an entry reverses its effect on
-        inventory — use it to fix something entered by mistake, then re-enter it
-        correctly.
+        Review recent activity. Click <span className="font-semibold">Edit items</span>{" "}
+        on any entry to change a quantity, remove a line, or{" "}
+        <span className="font-semibold">add a missed item</span> — inventory
+        adjusts automatically. Deleting an entry reverses its whole effect.
       </p>
 
       <div className="mt-4">
@@ -227,6 +292,74 @@ export default function EntriesManager({ entries }: { entries: EntryRow[] }) {
                           ))}
                         </div>
                       )}
+                      {/* Add a missed item */}
+                      <div className="mt-3 rounded-md border border-navy/15 bg-white p-2.5">
+                        <p className="mb-1.5 text-xs font-semibold text-navy">
+                          Add a missed item
+                          {e.type === "stock_out"
+                            ? " to this visit"
+                            : ""}{" "}
+                          — adjusts inventory automatically.
+                        </p>
+                        {addSelected ? (
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded bg-navy/5 px-2 py-1 text-sm font-medium">
+                              {addSelected.name}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setAddSelected(null)}
+                              className="text-xs font-semibold text-military"
+                            >
+                              change
+                            </button>
+                            <input
+                              type="number"
+                              min={1}
+                              value={addQty}
+                              onChange={(ev) => setAddQty(ev.target.value)}
+                              className="w-16 rounded-md border border-navy/20 px-2 py-1 text-center text-sm"
+                              title="Quantity"
+                            />
+                            <button
+                              onClick={addItem}
+                              className="btn-primary px-3 py-1 text-xs"
+                            >
+                              + Add item
+                            </button>
+                          </div>
+                        ) : (
+                          <div>
+                            <input
+                              value={addSearch}
+                              onChange={(ev) => setAddSearch(ev.target.value)}
+                              placeholder="Search item to add…"
+                              className="w-full max-w-sm rounded-md border border-navy/20 px-2 py-1 text-sm"
+                            />
+                            {matches.length > 0 && (
+                              <div className="mt-1 max-h-40 max-w-sm overflow-y-auto rounded-md border border-black/10 bg-white">
+                                {matches.map((m) => (
+                                  <button
+                                    key={m.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setAddSelected(m);
+                                      setAddSearch("");
+                                    }}
+                                    className="block w-full px-2 py-1.5 text-left text-sm hover:bg-offwhite"
+                                  >
+                                    <span className="font-medium">{m.name}</span>{" "}
+                                    <span className="text-xs text-charcoal/50">
+                                      ({m.category})
+                                    </span>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
                       {e.type === "audit" && (
                         <p className="mt-2 text-xs text-charcoal/50">
                           Note: this is a stock count — editing these lines

@@ -1,6 +1,6 @@
 import { requirePermission } from "@/lib/auth";
 import { sql } from "@/lib/db";
-import EntriesManager, { type EntryRow } from "./EntriesManager";
+import EntriesManager, { type EntryRow, type CatalogItemLite } from "./EntriesManager";
 
 export const dynamic = "force-dynamic";
 
@@ -35,5 +35,18 @@ export default async function EntriesPage() {
     detail: r.notes || `${r.items} item(s)`,
   }));
 
-  return <EntriesManager entries={entries} />;
+  // Active items, for adding a missed item onto an entry.
+  const { rows: itemRows } = await sql`
+    SELECT i.id, i.name, c.name AS category
+    FROM items i JOIN categories c ON c.id = i.category_id
+    WHERE i.is_active = true
+    ORDER BY c.name, i.name;
+  `;
+  const catalog: CatalogItemLite[] = itemRows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    category: r.category,
+  }));
+
+  return <EntriesManager entries={entries} catalog={catalog} />;
 }

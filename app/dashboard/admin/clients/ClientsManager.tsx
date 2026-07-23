@@ -858,12 +858,23 @@ export default function ClientsManager({
                                 <td className="py-1.5">{h.pointsUsed}</td>
                                 <td className="py-1.5">{h.volunteer ?? "—"}</td>
                                 <td className="py-1.5 text-right">
-                                  <button
-                                    onClick={() => loadVisitItems(h.transactionId)}
-                                    className="rounded border border-navy/20 px-2 py-0.5 text-xs font-semibold text-navy"
-                                  >
-                                    {visitItemsFor === h.transactionId ? "Hide items" : "View items"}
-                                  </button>
+                                  <div className="flex justify-end gap-1.5">
+                                    <button
+                                      onClick={() => loadVisitItems(h.transactionId)}
+                                      className="rounded border border-navy/20 px-2 py-0.5 text-xs font-semibold text-navy"
+                                    >
+                                      {visitItemsFor === h.transactionId ? "Hide items" : "View items"}
+                                    </button>
+                                    <a
+                                      href={`/dashboard/admin/entries?open=${h.transactionId}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="rounded border border-navy/20 px-2 py-0.5 text-xs font-semibold text-navy"
+                                      title="Edit this visit / add a missed item (needs Corrections access)"
+                                    >
+                                      Edit
+                                    </a>
+                                  </div>
                                 </td>
                               </tr>
                               {visitItemsFor === h.transactionId && (
